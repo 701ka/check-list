@@ -2,8 +2,10 @@
 <html lang="en" class="h-full">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Habit Tracker Pro</title>
+    <!-- Telegram Web App SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <!-- Custom Site Mark / Favicon -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%236366f1'><path d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z'/></svg>">
     <!-- Tailwind CSS -->
@@ -45,6 +47,9 @@
             font-size: calc(1rem * var(--font-scale));
             -webkit-tap-highlight-color: transparent;
             transition: background-color 0.25s ease;
+            padding-top: env(safe-area-inset-top, 0);
+            padding-bottom: env(safe-area-inset-bottom, 0);
+            touch-action: manipulation;
         }
 
         /* Custom Accent Override Classes */
@@ -109,123 +114,137 @@
         .toggle-switch-knob { transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
     </style>
 </head>
-<body class="text-slate-900 dark:text-slate-100 h-screen w-screen overflow-hidden flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
+<body class="text-slate-900 dark:text-slate-100 min-h-[100dvh] h-[100dvh] w-full overflow-hidden flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
 
     <!-- Top Navigation Header -->
-    <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700/80 px-4 sm:px-6 py-3 flex-shrink-0 z-30 shadow-sm">
-        <div class="max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-3">
+    <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700/80 px-3 sm:px-6 py-2.5 sm:py-3 flex-shrink-0 z-30 shadow-xs">
+        <div class="max-w-[1600px] mx-auto flex flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-3">
             
-            <!-- Logo & Brand Site Mark -->
-            <div class="flex items-center space-x-3 flex-shrink-0">
-                <div class="p-2 bg-brand-primary text-white rounded-xl shadow-md flex items-center justify-center flex-shrink-0">
-                    <!-- Target Checkmark Site Mark Icon -->
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="9" stroke-width="2"/>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4"/>
-                    </svg>
+            <!-- Top Sub-Row: Brand Logo + TG User + Action Icons -->
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2.5 sm:space-x-3">
+                    <div class="p-1.5 sm:p-2 bg-brand-primary text-white rounded-xl shadow-md flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="9" stroke-width="2"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4"/>
+                        </svg>
+                    </div>
+                    <div class="flex flex-col justify-center">
+                        <h1 class="text-sm sm:text-lg font-black tracking-tight text-slate-900 dark:text-white leading-tight flex items-center gap-1.5">
+                            Habit Tracker <span class="text-brand-primary">Pro</span>
+                            <span id="tg-user-badge" class="hidden text-[10px] font-extrabold bg-indigo-50 dark:bg-indigo-950/80 text-brand-primary border border-indigo-200 dark:border-indigo-800 px-2 py-0.5 rounded-full ml-1"></span>
+                        </h1>
+                        <p class="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 font-semibold">Daily Checklist & Progress</p>
+                    </div>
                 </div>
-                <div class="whitespace-nowrap flex flex-col justify-center">
-                    <h1 class="text-base sm:text-lg font-black tracking-tight text-slate-900 dark:text-white leading-tight whitespace-nowrap flex items-center gap-1.5">
-                        Habit Tracker <span class="text-brand-primary">Pro</span>
-                    </h1>
-                    <p class="text-[10px] sm:text-[11px] text-slate-600 dark:text-slate-400 font-semibold">Daily Checklist & Performance</p>
+
+                <!-- Quick Action Icons (Appearance & Reset Month - Mobile) -->
+                <div class="flex items-center space-x-1.5 md:hidden">
+                    <button id="open-appearance-modal-btn-mobile" class="p-2 bg-slate-100 dark:bg-slate-700/70 text-slate-700 dark:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-600 rounded-xl border border-slate-200 dark:border-slate-600 transition" title="Appearance Settings">
+                        <svg class="w-4 h-4 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+                        </svg>
+                    </button>
+                    <button id="clear-all-checkboxes-btn-mobile" class="p-2 bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900 rounded-xl border border-rose-200 dark:border-rose-800 transition" title="Clear Month Checks">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    </button>
                 </div>
             </div>
 
-            <!-- Month Controls, Theme Settings & Mode Switcher -->
-            <div class="flex items-center flex-wrap gap-2.5">
+            <!-- Controls (Month Navigator, Mode & Add Habit) -->
+            <div class="flex items-center justify-between md:justify-end flex-wrap gap-2">
                 <!-- Month Navigator -->
-                <div class="flex items-center bg-slate-100 dark:bg-slate-700/70 p-1 rounded-xl border border-slate-200 dark:border-slate-600">
-                    <button id="prev-month-btn" class="p-1.5 text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-600 rounded-lg transition" title="Previous Month">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+                <div class="flex items-center bg-slate-100 dark:bg-slate-700/70 p-0.5 sm:p-1 rounded-xl border border-slate-200 dark:border-slate-600 flex-1 sm:flex-initial justify-between">
+                    <button id="prev-month-btn" class="p-1 sm:p-1.5 text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-600 rounded-lg transition" title="Previous Month">
+                        <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
                     </button>
-                    <span id="month-display-name" class="px-3 text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-100 min-w-[130px] text-center">
+                    <span id="month-display-name" class="px-2 sm:px-3 text-[11px] sm:text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-100 min-w-[100px] sm:min-w-[130px] text-center">
                         OCTOBER 2026
                     </span>
-                    <button id="next-month-btn" class="p-1.5 text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-600 rounded-lg transition" title="Next Month">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+                    <button id="next-month-btn" class="p-1 sm:p-1.5 text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-600 rounded-lg transition" title="Next Month">
+                        <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
                     </button>
                 </div>
 
-                <!-- Appearance Customization Settings Button -->
-                <button id="open-appearance-modal-btn" class="p-2 bg-slate-100 dark:bg-slate-700/70 text-slate-700 dark:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-600 rounded-xl border border-slate-200 dark:border-slate-600 transition flex items-center justify-center" title="Ko'rinish sozlamalari">
-                    <svg class="w-5 h-5 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
-                    </svg>
-                </button>
-
-                <!-- Clear All Checkboxes Button -->
-                <button id="clear-all-checkboxes-btn" class="p-2 bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900 rounded-xl border border-rose-200 dark:border-rose-800 transition flex items-center justify-center" title="Clear All Checkboxes">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                </button>
+                <!-- Desktop appearance & clear buttons -->
+                <div class="hidden md:flex items-center space-x-1.5">
+                    <button id="open-appearance-modal-btn" class="p-2 bg-slate-100 dark:bg-slate-700/70 text-slate-700 dark:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-600 rounded-xl border border-slate-200 dark:border-slate-600 transition" title="Ko'rinish sozlamalari">
+                        <svg class="w-4 h-4 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+                        </svg>
+                    </button>
+                    <button id="clear-all-checkboxes-btn" class="p-2 bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900 rounded-xl border border-rose-200 dark:border-rose-800 transition" title="Clear Month Checkmarks">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    </button>
+                </div>
 
                 <!-- Edit Mode Toggle Switch -->
-                <button id="edit-mode-toggle" type="button" class="flex items-center space-x-2 bg-slate-100 dark:bg-slate-700/70 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-slate-200/60 dark:hover:bg-slate-600/80 transition" role="switch" aria-checked="false">
-                    <span class="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-200">EDIT MODE</span>
-                    <div id="toggle-bg" class="toggle-switch-bg w-9 h-5 rounded-full bg-slate-300 dark:bg-slate-500 relative p-0.5">
-                        <div id="toggle-knob" class="toggle-switch-knob w-4 h-4 rounded-full bg-white shadow-md transform translate-x-0"></div>
+                <button id="edit-mode-toggle" type="button" class="flex items-center space-x-1.5 sm:space-x-2 bg-slate-100 dark:bg-slate-700/70 px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-slate-200/60 dark:hover:bg-slate-600/80 transition" role="switch" aria-checked="false">
+                    <span class="text-[10px] sm:text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">EDIT</span>
+                    <div id="toggle-bg" class="toggle-switch-bg w-8 sm:w-9 h-4.5 sm:h-5 rounded-full bg-slate-300 dark:bg-slate-500 relative p-0.5">
+                        <div id="toggle-knob" class="toggle-switch-knob w-3.5 sm:w-4 h-3.5 sm:h-4 rounded-full bg-white shadow-md transform translate-x-0"></div>
                     </div>
                 </button>
 
                 <!-- Add Habit Button -->
-                <button id="open-add-habit-btn" class="flex items-center space-x-1.5 bg-brand-primary hover:opacity-90 active:scale-95 text-white px-3.5 py-2 rounded-xl text-xs font-extrabold shadow-md transition">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
-                    <span>Add Habit</span>
+                <button id="open-add-habit-btn" class="flex items-center space-x-1 bg-brand-primary hover:opacity-90 active:scale-95 text-white px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-black shadow-md transition">
+                    <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+                    <span>Add</span>
                 </button>
             </div>
         </div>
     </header>
 
     <!-- Main Fullscreen Layout Body -->
-    <main class="flex-grow max-w-[1600px] w-full mx-auto p-3 sm:p-5 flex flex-col space-y-4 overflow-hidden">
+    <main class="flex-grow max-w-[1600px] w-full mx-auto p-2 sm:p-5 flex flex-col space-y-2.5 sm:space-y-4 overflow-hidden">
 
         <!-- STATS DASHBOARD ROW -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 flex-shrink-0">
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-4 flex-shrink-0">
 
             <!-- Card 1: Today's Date -->
-            <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700/80 flex flex-col justify-between">
+            <div class="bg-white dark:bg-slate-800 p-3 sm:p-4 rounded-2xl shadow-xs border border-slate-200 dark:border-slate-700/80 flex flex-col justify-between">
                 <div class="flex items-center justify-between text-slate-700 dark:text-slate-300 mb-1">
-                    <span class="text-xs uppercase font-extrabold tracking-wider text-brand-primary">DATE</span>
-                    <svg class="w-5 h-5 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    <span class="text-[10px] sm:text-xs uppercase font-extrabold tracking-wider text-brand-primary">DATE</span>
+                    <svg class="w-4 h-4 sm:w-5 sm:h-5 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                 </div>
                 <div>
-                    <div class="text-xs text-slate-700 dark:text-slate-300 font-extrabold uppercase tracking-wider" id="today-word">TODAY</div>
-                    <div class="text-3xl font-black text-slate-900 dark:text-white tracking-tight" id="wireframe-formatted-date">
+                    <div class="text-[10px] sm:text-xs text-slate-600 dark:text-slate-400 font-extrabold uppercase tracking-wider" id="today-word">TODAY</div>
+                    <div class="text-xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight" id="wireframe-formatted-date">
                         31.10.26
                     </div>
                 </div>
-                <div class="mt-2 pt-2 border-t border-slate-100 dark:border-slate-700/60 flex justify-between items-center text-xs text-slate-700 dark:text-slate-300 font-semibold">
-                    <span>Habits Active:</span>
+                <div class="mt-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-700/60 flex justify-between items-center text-[10px] sm:text-xs text-slate-700 dark:text-slate-300 font-semibold">
+                    <span>Habits:</span>
                     <span id="active-habits-count" class="font-extrabold text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-600">0</span>
                 </div>
             </div>
 
             <!-- Card 2: Today's Goal Progress Ring -->
-            <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700/80 flex items-center justify-between">
+            <div class="bg-white dark:bg-slate-800 p-3 sm:p-4 rounded-2xl shadow-xs border border-slate-200 dark:border-slate-700/80 flex items-center justify-between">
                 <div class="flex flex-col justify-between h-full space-y-1">
                     <div>
-                        <span class="text-xs uppercase font-extrabold tracking-wider text-slate-700 dark:text-slate-300">DAILY COMPLETION</span>
-                        <h3 class="text-base font-black text-slate-900 dark:text-white mt-0.5">Today's Goal</h3>
+                        <span class="text-[10px] sm:text-xs uppercase font-extrabold tracking-wider text-slate-700 dark:text-slate-300">DAILY GOAL</span>
+                        <h3 class="text-xs sm:text-base font-black text-slate-900 dark:text-white mt-0.5">Today</h3>
                     </div>
-                    <div class="text-xs text-slate-700 dark:text-slate-300 font-bold">
-                        <span id="completed-count-badge" class="font-black text-brand-primary">0 of 0</span> done today
+                    <div class="text-[10px] sm:text-xs text-slate-700 dark:text-slate-300 font-bold">
+                        <span id="completed-count-badge" class="font-black text-brand-primary">0 of 0</span> done
                     </div>
                 </div>
 
                 <!-- Dynamic Circular SVG Donut Chart -->
-                <div class="relative w-20 h-20 sm:w-22 sm:h-22 flex items-center justify-center flex-shrink-0">
+                <div class="relative w-14 h-14 sm:w-20 sm:h-20 flex items-center justify-center flex-shrink-0">
                     <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                         <path class="text-slate-200 dark:text-slate-700" stroke-width="3.8" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
                         <path id="donut-progress-path" class="text-brand-primary transition-all duration-300 ease-out" stroke-dasharray="0, 100" stroke-width="3.8" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
                     </svg>
                     <div class="absolute inset-0 flex items-center justify-center">
-                        <span id="completion-percentage-text" class="text-lg font-black text-slate-900 dark:text-white">0%</span>
+                        <span id="completion-percentage-text" class="text-xs sm:text-lg font-black text-slate-900 dark:text-white">0%</span>
                     </div>
                 </div>
             </div>
 
             <!-- Card 3: Monthly Progress Trend Line -->
-            <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700/80 flex flex-col justify-between">
+            <div class="col-span-2 md:col-span-1 bg-white dark:bg-slate-800 p-3 sm:p-4 rounded-2xl shadow-xs border border-slate-200 dark:border-slate-700/80 flex flex-col justify-between">
                 <div class="flex items-center justify-between mb-1">
                     <span class="text-xs uppercase font-extrabold tracking-wider text-slate-700 dark:text-slate-300">MONTHLY PROGRESS</span>
                     <span class="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 flex items-center gap-1">
@@ -233,7 +252,7 @@
                     </span>
                 </div>
                 <!-- Pure SVG Line Chart -->
-                <div class="h-16 w-full relative">
+                <div class="h-10 sm:h-14 w-full relative">
                     <svg id="svg-trend-chart" class="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 300 80">
                         <!-- Rendered dynamically -->
                     </svg>
@@ -242,26 +261,39 @@
 
         </div>
 
-        <!-- HABIT MATRIX TABLE CONTAINER (Fills Remaining Screen Height) -->
-        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700/80 flex-1 min-h-0 flex flex-col overflow-hidden">
+        <!-- HABIT MATRIX & CHECKLIST CONTAINER (Fills Remaining Screen Height) -->
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xs border border-slate-200 dark:border-slate-700/80 flex-1 min-h-0 flex flex-col overflow-hidden">
             
-            <!-- Status Information Toolbar -->
-            <div class="px-4 py-2.5 border-b border-slate-200 dark:border-slate-700/80 flex flex-wrap items-center justify-between gap-2 bg-slate-50 dark:bg-slate-800/90 flex-shrink-0">
-                <div class="flex items-center space-x-2.5">
-                    <span id="mode-status-badge" class="px-2.5 py-1 text-[11px] font-black rounded-md bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200 tracking-wider">
+            <!-- Status Information & View Switcher Toolbar -->
+            <div class="px-3 sm:px-4 py-2 border-b border-slate-200 dark:border-slate-700/80 flex flex-wrap items-center justify-between gap-2 bg-slate-50 dark:bg-slate-800/90 flex-shrink-0">
+                <div class="flex items-center space-x-2">
+                    <span id="mode-status-badge" class="px-2 py-0.5 text-[10px] sm:text-[11px] font-black rounded-md bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200 tracking-wider">
                         VIEW MODE
                     </span>
-                    <span class="text-xs text-slate-700 dark:text-slate-300 font-bold" id="mode-instruction-text">
+                    <span class="text-[11px] sm:text-xs text-slate-700 dark:text-slate-300 font-bold hidden sm:inline" id="mode-instruction-text">
                         Current month active for check-ins!
                     </span>
                 </div>
-                <button id="jump-today-button" class="px-3 py-1 text-xs font-extrabold bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-600 transition shadow-xs">
-                    Jump to Current Month
+
+                <!-- View Switcher Tabs: Matrix vs Today Checklist -->
+                <div class="flex items-center bg-slate-200/70 dark:bg-slate-700/70 p-0.5 rounded-xl text-xs font-black">
+                    <button id="view-tab-matrix" type="button" class="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs transition flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                        <span>Matrix</span>
+                    </button>
+                    <button id="view-tab-today" type="button" class="px-2.5 py-1 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        <span>Today</span>
+                    </button>
+                </div>
+
+                <button id="jump-today-button" class="px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs font-black bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-600 transition shadow-xs">
+                    Jump to Today
                 </button>
             </div>
 
-            <!-- Scrollable Matrix Viewport -->
-            <div class="overflow-x-auto overflow-y-auto matrix-scroll flex-1 w-full">
+            <!-- VIEW 1: Scrollable Matrix Viewport -->
+            <div id="matrix-viewport" class="overflow-x-auto overflow-y-auto matrix-scroll flex-1 w-full">
                 <table class="w-full text-left border-collapse min-w-max">
                     <thead id="matrix-thead" class="sticky top-0 z-20">
                         <!-- Header headers rendered via JS -->
@@ -270,6 +302,11 @@
                         <!-- Matrix rows rendered via JS -->
                     </tbody>
                 </table>
+            </div>
+
+            <!-- VIEW 2: Today's Mobile-Optimized Checklist Viewport -->
+            <div id="today-viewport" class="hidden overflow-y-auto matrix-scroll flex-1 p-3 sm:p-5 space-y-2.5">
+                <!-- Checklist items dynamically rendered via JS -->
             </div>
 
             <!-- Empty State View -->
@@ -481,6 +518,7 @@
             selectedMonth: TODAY_MONTH,
             isEditMode: false,
             selectedColor: 'indigo',
+            currentView: 'matrix', // 'matrix' or 'today'
             habits: []
         };
 
@@ -515,11 +553,81 @@
             formHabitId: document.getElementById('form-habit-id'),
             formHabitName: document.getElementById('form-habit-name'),
             modalTitleText: document.getElementById('modal-title-text'),
-            appearanceModal: document.getElementById('appearance-modal')
+            appearanceModal: document.getElementById('appearance-modal'),
+            matrixViewport: document.getElementById('matrix-viewport'),
+            todayViewport: document.getElementById('today-viewport'),
+            viewTabMatrix: document.getElementById('view-tab-matrix'),
+            viewTabToday: document.getElementById('view-tab-today'),
+            openAppearanceModalBtnMobile: document.getElementById('open-appearance-modal-btn-mobile'),
+            clearAllCheckboxesBtnMobile: document.getElementById('clear-all-checkboxes-btn-mobile'),
+            tgUserBadge: document.getElementById('tg-user-badge')
         };
+
+        // Telegram Web App Context & Haptics
+        const tg = window.Telegram?.WebApp;
+
+        function initTelegram() {
+            if (!tg) return;
+            try {
+                tg.ready();
+                tg.expand();
+                if (tg.enableClosingConfirmation) tg.enableClosingConfirmation();
+
+                // Detect Telegram User
+                const user = tg.initDataUnsafe?.user;
+                if (user && user.first_name) {
+                    if (dom.tgUserBadge) {
+                        dom.tgUserBadge.textContent = `👋 ${user.first_name}`;
+                        dom.tgUserBadge.classList.remove('hidden');
+                    }
+                }
+
+                // Set Telegram Header / Background Colors
+                if (tg.setHeaderColor) {
+                    tg.setHeaderColor(themeState.bgTint || '#f8fafc');
+                }
+                if (tg.setBackgroundColor) {
+                    tg.setBackgroundColor(themeState.bgTint || '#f8fafc');
+                }
+
+                // Theme syncing if in Telegram
+                if (tg.colorScheme && themeState.mode === 'auto') {
+                    if (tg.colorScheme === 'dark') {
+                        document.documentElement.classList.add('dark');
+                    } else {
+                        document.documentElement.classList.remove('dark');
+                    }
+                }
+
+                tg.onEvent?.('themeChanged', () => {
+                    if (themeState.mode === 'auto') {
+                        applyTheme();
+                    }
+                });
+            } catch (e) {
+                console.log("Telegram init error:", e);
+            }
+        }
+
+        function triggerHaptic(type = 'light') {
+            try {
+                if (tg && tg.HapticFeedback) {
+                    tg.HapticFeedback.impactOccurred(type);
+                }
+            } catch (e) {}
+        }
+
+        function triggerNotificationHaptic(type = 'success') {
+            try {
+                if (tg && tg.HapticFeedback) {
+                    tg.HapticFeedback.notificationOccurred(type);
+                }
+            } catch (e) {}
+        }
 
         // Initialize App
         function init() {
+            initTelegram();
             loadState();
             loadThemeState();
             applyTheme();
@@ -528,6 +636,12 @@
             }
             bindEvents();
             render();
+
+            // Mobile-first default view (Today checklist on mobile if preferred)
+            const savedView = localStorage.getItem('habit_tracker_view_pref');
+            if (savedView === 'today' || (window.innerWidth < 640 && !savedView)) {
+                switchView('today');
+            }
         }
 
         // Local Storage State Handlers
@@ -685,21 +799,37 @@
             });
 
             document.getElementById('jump-today-button').addEventListener('click', () => {
+                triggerHaptic('light');
                 state.selectedYear = TODAY_YEAR;
                 state.selectedMonth = TODAY_MONTH;
                 render();
+                if (state.currentView === 'matrix') {
+                    setTimeout(scrollToTodayColumn, 100);
+                }
+            });
+
+            // View Switcher Tabs: Matrix vs Today Checklist
+            dom.viewTabMatrix?.addEventListener('click', () => {
+                triggerHaptic('light');
+                switchView('matrix');
+            });
+
+            dom.viewTabToday?.addEventListener('click', () => {
+                triggerHaptic('light');
+                switchView('today');
             });
 
             // Edit mode toggle
             dom.editModeToggle.addEventListener('click', () => {
+                triggerHaptic('medium');
                 state.isEditMode = !state.isEditMode;
                 dom.editModeToggle.setAttribute('aria-checked', state.isEditMode ? 'true' : 'false');
                 if (state.isEditMode) {
-                    dom.toggleBg.className = 'toggle-switch-bg w-9 h-5 rounded-full bg-brand-primary relative p-0.5';
-                    dom.toggleKnob.className = 'toggle-switch-knob w-4 h-4 rounded-full bg-white shadow-md transform translate-x-4';
+                    dom.toggleBg.className = 'toggle-switch-bg w-8 sm:w-9 h-4.5 sm:h-5 rounded-full bg-brand-primary relative p-0.5';
+                    dom.toggleKnob.className = 'toggle-switch-knob w-3.5 sm:w-4 h-3.5 sm:h-4 rounded-full bg-white shadow-md transform translate-x-3.5 sm:translate-x-4';
                 } else {
-                    dom.toggleBg.className = 'toggle-switch-bg w-9 h-5 rounded-full bg-slate-300 dark:bg-slate-500 relative p-0.5';
-                    dom.toggleKnob.className = 'toggle-switch-knob w-4 h-4 rounded-full bg-white shadow-md transform translate-x-0';
+                    dom.toggleBg.className = 'toggle-switch-bg w-8 sm:w-9 h-4.5 sm:h-5 rounded-full bg-slate-300 dark:bg-slate-500 relative p-0.5';
+                    dom.toggleKnob.className = 'toggle-switch-knob w-3.5 sm:w-4 h-3.5 sm:h-4 rounded-full bg-white shadow-md transform translate-x-0';
                 }
                 render();
             });
@@ -752,6 +882,7 @@
                     });
                 }
 
+                triggerHaptic('medium');
                 saveState();
                 closeHabitModal();
                 render();
@@ -760,16 +891,18 @@
             // Badge Color Options Selector
             document.querySelectorAll('.color-opt').forEach(btn => {
                 btn.addEventListener('click', () => {
+                    triggerHaptic('light');
                     state.selectedColor = btn.dataset.color;
                     updateColorSelectionUI();
                 });
             });
 
             // Clear Habit Checkboxes for Current Month
-            document.getElementById('clear-all-checkboxes-btn').addEventListener('click', () => {
+            function handleClearMonthCheckboxes() {
                 const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
                 const monthName = monthNames[state.selectedMonth];
                 if (confirm(`Clear all habit checkmarks for ${monthName} ${state.selectedYear}?`)) {
+                    triggerHaptic('warning');
                     const daysCount = getDaysInMonth(state.selectedYear, state.selectedMonth);
                     for (let d = 1; d <= daysCount; d++) {
                         const dateKey = formatDateKey(state.selectedYear, state.selectedMonth, d);
@@ -780,11 +913,15 @@
                     saveState();
                     render();
                 }
-            });
+            }
+
+            document.getElementById('clear-all-checkboxes-btn')?.addEventListener('click', handleClearMonthCheckboxes);
+            dom.clearAllCheckboxesBtnMobile?.addEventListener('click', handleClearMonthCheckboxes);
 
             // Appearance Modal Controls
-            document.getElementById('open-appearance-modal-btn').addEventListener('click', openAppearanceModal);
-            document.getElementById('close-appearance-modal-btn').addEventListener('click', closeAppearanceModal);
+            document.getElementById('open-appearance-modal-btn')?.addEventListener('click', openAppearanceModal);
+            dom.openAppearanceModalBtnMobile?.addEventListener('click', openAppearanceModal);
+            document.getElementById('close-appearance-modal-btn')?.addEventListener('click', closeAppearanceModal);
 
             // Mode Selector (Light / Dark / Auto)
             document.querySelectorAll('.mode-btn').forEach(btn => {
@@ -1017,7 +1154,7 @@
 
             // Build Header
             let theadHTML = `<tr class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 text-xs font-black uppercase tracking-wider">`;
-            theadHTML += `<th class="py-3 px-4 sticky-col-header bg-slate-100 dark:bg-slate-800 min-w-[240px] w-64"># &nbsp; HABIT LIST</th>`;
+            theadHTML += `<th class="py-3 px-3 sm:px-4 sticky-col-header bg-slate-100 dark:bg-slate-800 min-w-[130px] sm:min-w-[240px] w-36 sm:w-64"># &nbsp; HABIT LIST</th>`;
 
             for (let d = 1; d <= daysCount; d++) {
                 const dateObj = new Date(state.selectedYear, state.selectedMonth, d);
@@ -1053,7 +1190,7 @@
                 tbodyHTML += `<tr ${draggableAttrs}>`;
 
                 // Sticky Title / Actions Column with Index Number & Drag Handle
-                tbodyHTML += `<td class="py-2 px-4 sticky-col bg-white dark:bg-slate-800 border-r border-slate-100 dark:border-slate-700/60 min-w-[240px] w-64">
+                tbodyHTML += `<td class="py-2 px-3 sm:px-4 sticky-col bg-white dark:bg-slate-800 border-r border-slate-100 dark:border-slate-700/60 min-w-[130px] sm:min-w-[240px] w-36 sm:w-64">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center space-x-2.5 min-w-0 pr-2">
                             ${state.isEditMode ? '<span class="text-slate-400 cursor-grab select-none text-xs">⋮⋮</span>' : ''}
@@ -1157,6 +1294,154 @@
                 .replace(/'/g, "&#039;");
         }
 
+        // Helper: Scroll Matrix Table horizontally to Today's column
+        function scrollToTodayColumn() {
+            if (!dom.matrixViewport) return;
+            const todayHeader = dom.matrixThead?.querySelector('.text-brand-primary');
+            if (todayHeader) {
+                const viewportWidth = dom.matrixViewport.clientWidth;
+                const targetLeft = todayHeader.offsetLeft - (viewportWidth / 2) + 30;
+                dom.matrixViewport.scrollTo({ left: Math.max(0, targetLeft), behavior: 'smooth' });
+            }
+        }
+
+        // Helper: Calculate habit streak ending today (or yesterday if today not done)
+        function getHabitStreak(habit) {
+            if (!habit.records) return 0;
+            let streak = 0;
+            const today = new Date();
+            const todayKey = formatDateKey(today.getFullYear(), today.getMonth(), today.getDate());
+            let checkDate = new Date(today);
+            
+            if (!habit.records[todayKey]) {
+                checkDate.setDate(checkDate.getDate() - 1);
+            }
+            
+            while (true) {
+                const k = formatDateKey(checkDate.getFullYear(), checkDate.getMonth(), checkDate.getDate());
+                if (habit.records[k]) {
+                    streak++;
+                    checkDate.setDate(checkDate.getDate() - 1);
+                } else {
+                    break;
+                }
+            }
+            return streak;
+        }
+
+        // Render Today's Mobile Checklist View
+        function renderTodayChecklistView() {
+            if (!dom.todayViewport) return;
+            const todayKey = formatDateKey(TODAY_YEAR, TODAY_MONTH, TODAY_DATE);
+            const daysInMonth = getDaysInMonth(TODAY_YEAR, TODAY_MONTH);
+
+            if (!state.habits || state.habits.length === 0) {
+                dom.todayViewport.innerHTML = `
+                    <div class="py-12 text-center">
+                        <p class="text-sm font-bold text-slate-400">No habits found. Add your first habit above!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let allDone = true;
+            let completedCount = 0;
+
+            let itemsHTML = '';
+            state.habits.forEach((habit, idx) => {
+                const isChecked = habit.records && !!habit.records[todayKey];
+                if (isChecked) completedCount++;
+                else allDone = false;
+
+                const colorConfig = COLOR_MAP[habit.color] || COLOR_MAP.indigo;
+                const streak = getHabitStreak(habit);
+                
+                let monthlyDone = 0;
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const k = formatDateKey(TODAY_YEAR, TODAY_MONTH, d);
+                    if (habit.records && habit.records[k]) monthlyDone++;
+                }
+
+                itemsHTML += `
+                    <div class="bg-slate-50 dark:bg-slate-900/60 p-3 sm:p-4 rounded-2xl border ${isChecked ? 'border-brand-primary/40 bg-brand-primary/5 dark:bg-brand-primary/10' : 'border-slate-200 dark:border-slate-700/70'} flex items-center justify-between gap-3 transition-all duration-200 shadow-xs">
+                        <div class="flex items-center space-x-3 min-w-0 flex-1">
+                            <button onclick="toggleHabitCheck('${habit.id}', '${todayKey}')" class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform active:scale-90 ${isChecked ? colorConfig.bg + ' text-white shadow-sm' : 'border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-brand-primary'}" aria-label="Toggle ${escapeHtml(habit.name)}">
+                                ${isChecked ? '<svg class="w-6 h-6 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>' : ''}
+                            </button>
+                            <div class="min-w-0 flex-1 cursor-pointer" onclick="toggleHabitCheck('${habit.id}', '${todayKey}')">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2.5 h-2.5 rounded-full ${colorConfig.bg} flex-shrink-0"></span>
+                                    <h4 class="text-xs sm:text-sm font-black truncate text-slate-800 dark:text-slate-100 ${isChecked ? 'line-through text-slate-400 dark:text-slate-500' : ''}">
+                                        ${escapeHtml(habit.name)}
+                                    </h4>
+                                </div>
+                                <div class="flex items-center gap-2.5 mt-1 text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                                    ${streak > 0 ? `<span class="flex items-center text-amber-600 dark:text-amber-400 font-extrabold">🔥 ${streak} day${streak > 1 ? 's' : ''} streak</span>` : '<span class="text-slate-400">0 streak</span>'}
+                                    <span>•</span>
+                                    <span>${monthlyDone}/${daysInMonth} this month</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        ${state.isEditMode ? `
+                            <div class="flex items-center space-x-1 flex-shrink-0">
+                                <button onclick="editHabit('${habit.id}')" class="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 text-brand-primary rounded-lg transition" title="Edit">✏️</button>
+                                <button onclick="deleteHabit('${habit.id}')" class="p-2 hover:bg-rose-100 dark:hover:bg-rose-950 text-rose-500 rounded-lg transition" title="Delete">🗑️</button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+
+            let bannerHTML = '';
+            if (allDone && state.habits.length > 0) {
+                bannerHTML = `
+                    <div class="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-500/15 to-teal-500/15 border border-emerald-500/30 flex items-center gap-3 mb-2">
+                        <span class="text-2xl">🎉</span>
+                        <div>
+                            <h5 class="text-xs sm:text-sm font-black text-emerald-700 dark:text-emerald-300">All habits done today!</h5>
+                            <p class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">You've hit 100% of your daily goals. Keep the streak going!</p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            dom.todayViewport.innerHTML = bannerHTML + itemsHTML;
+        }
+
+        // View Mode Switcher: Matrix vs Today Checklist
+        function switchView(view) {
+            state.currentView = view;
+            try {
+                localStorage.setItem('habit_tracker_view_pref', view);
+            } catch(e) {}
+
+            if (view === 'today') {
+                dom.todayViewport?.classList.remove('hidden');
+                dom.matrixViewport?.classList.add('hidden');
+                if (dom.viewTabToday) {
+                    dom.viewTabToday.className = 'px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs transition flex items-center gap-1.5 font-black';
+                }
+                if (dom.viewTabMatrix) {
+                    dom.viewTabMatrix.className = 'px-2.5 py-1 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition flex items-center gap-1.5 font-bold';
+                }
+                renderTodayChecklistView();
+            } else {
+                dom.todayViewport?.classList.add('hidden');
+                dom.matrixViewport?.classList.remove('hidden');
+                if (dom.viewTabMatrix) {
+                    dom.viewTabMatrix.className = 'px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs transition flex items-center gap-1.5 font-black';
+                }
+                if (dom.viewTabToday) {
+                    dom.viewTabToday.className = 'px-2.5 py-1 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition flex items-center gap-1.5 font-bold';
+                }
+                renderMatrixTable();
+                if (state.selectedYear === TODAY_YEAR && state.selectedMonth === TODAY_MONTH) {
+                    setTimeout(scrollToTodayColumn, 80);
+                }
+            }
+        }
+
         // Global Habit Action Handlers
         window.toggleHabitCheck = function(habitId, dateKey) {
             const habit = state.habits.find(h => h.id === habitId);
@@ -1164,10 +1449,21 @@
 
             if (!habit.records) habit.records = {};
             
-            if (habit.records[dateKey]) {
+            const wasChecked = !!habit.records[dateKey];
+            if (wasChecked) {
                 delete habit.records[dateKey];
+                triggerHaptic('light');
             } else {
                 habit.records[dateKey] = true;
+                triggerHaptic('medium');
+            }
+
+            const todayKey = formatDateKey(TODAY_YEAR, TODAY_MONTH, TODAY_DATE);
+            if (dateKey === todayKey && !wasChecked) {
+                const allDone = state.habits.length > 0 && state.habits.every(h => h.records && h.records[todayKey]);
+                if (allDone) {
+                    triggerNotificationHaptic('success');
+                }
             }
 
             saveState();
@@ -1175,14 +1471,17 @@
         };
 
         window.deleteHabit = function(habitId) {
+            triggerHaptic('warning');
             if (confirm('Are you sure you want to delete this habit?')) {
                 state.habits = state.habits.filter(h => h.id !== habitId);
+                triggerNotificationHaptic('success');
                 saveState();
                 render();
             }
         };
 
         window.editHabit = function(habitId) {
+            triggerHaptic('light');
             const habit = state.habits.find(h => h.id === habitId);
             if (habit) openHabitModal(habit);
         };
@@ -1191,6 +1490,7 @@
         window.closeHabitModal = closeHabitModal;
         window.openAppearanceModal = openAppearanceModal;
         window.closeAppearanceModal = closeAppearanceModal;
+        window.switchView = switchView;
         window.handleDragStart = handleDragStart;
         window.handleDragOver = handleDragOver;
         window.handleDragLeave = handleDragLeave;
@@ -1233,8 +1533,12 @@
             // Update SVG Donut Progress Path
             dom.donutPath.setAttribute('stroke-dasharray', `${completionPct}, 100`);
 
-            // Render Matrix & Chart
-            renderMatrixTable();
+            // Render Active View (Matrix or Today Checklist)
+            if (state.currentView === 'today') {
+                renderTodayChecklistView();
+            } else {
+                renderMatrixTable();
+            }
             renderSVGSparkline();
         }
 
