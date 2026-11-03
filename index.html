@@ -90,8 +90,9 @@
             opacity: 0.4;
             background-color: rgba(99, 102, 241, 0.1) !important;
         }
-        tr.drag-over {
+        tr.drag-over > td {
             border-top: 3px solid var(--brand-600, #4f46e5) !important;
+            background-color: rgba(99, 102, 241, 0.08) !important;
         }
 
         .cb-box {
@@ -325,7 +326,7 @@
 
     <!-- APPEARANCE CUSTOMIZATION MODAL (Appearance Settings) -->
     <div id="appearance-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-200">
-        <div class="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-lg w-full p-6 space-y-5 max-h-[90vh] overflow-y-auto matrix-scroll">
+        <div id="appearance-modal-container" class="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-lg w-full p-6 space-y-5 max-h-[90vh] overflow-y-auto matrix-scroll">
             
             <!-- Header -->
             <div class="flex items-center justify-between">
@@ -350,7 +351,7 @@
                 <span class="text-[11px] font-black tracking-wider text-slate-400 dark:text-slate-500 uppercase">PRESET THEMES</span>
                 <div class="grid grid-cols-3 gap-2.5 mt-2" id="preset-grid">
                     <button data-preset="standart" class="preset-btn p-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-left hover:border-brand-primary transition">
-                        <div class="h-6 rounded-lg bg-red-500 mb-2 relative overflow-hidden flex items-center justify-end px-1.5"><div class="w-2.5 h-2.5 rounded-full bg-red-300"></div></div>
+                        <div class="h-6 rounded-lg bg-indigo-600 mb-2 relative overflow-hidden flex items-center justify-end px-1.5"><div class="w-2.5 h-2.5 rounded-full bg-indigo-300"></div></div>
                         <span class="text-xs font-black text-slate-800 dark:text-slate-200">Standard</span>
                     </button>
                     <button data-preset="ocean" class="preset-btn p-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-900 text-left hover:border-brand-primary transition">
@@ -696,15 +697,9 @@
                 if (state.isEditMode) {
                     dom.toggleBg.className = 'toggle-switch-bg w-9 h-5 rounded-full bg-brand-primary relative p-0.5';
                     dom.toggleKnob.className = 'toggle-switch-knob w-4 h-4 rounded-full bg-white shadow-md transform translate-x-4';
-                    dom.modeStatusBadge.className = 'px-2.5 py-1 text-[11px] font-black rounded-md bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 tracking-wider';
-                    dom.modeStatusBadge.textContent = 'EDIT MODE';
-                    dom.modeInstructionText.textContent = 'Reorder, edit titles, or remove habits below.';
                 } else {
                     dom.toggleBg.className = 'toggle-switch-bg w-9 h-5 rounded-full bg-slate-300 dark:bg-slate-500 relative p-0.5';
                     dom.toggleKnob.className = 'toggle-switch-knob w-4 h-4 rounded-full bg-white shadow-md transform translate-x-0';
-                    dom.modeStatusBadge.className = 'px-2.5 py-1 text-[11px] font-black rounded-md bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200 tracking-wider';
-                    dom.modeStatusBadge.textContent = 'VIEW MODE';
-                    dom.modeInstructionText.textContent = 'All days across the month are unlocked! Click any day box to toggle check-ins and test progress.';
                 }
                 render();
             });
@@ -715,12 +710,32 @@
             document.getElementById('close-modal-x').addEventListener('click', closeHabitModal);
             document.getElementById('modal-cancel-btn').addEventListener('click', closeHabitModal);
 
+            // Modal Backdrop Clicks (Click Outside to Close)
+            dom.habitModal.addEventListener('click', (e) => {
+                if (e.target === dom.habitModal) closeHabitModal();
+            });
+
+            dom.appearanceModal.addEventListener('click', (e) => {
+                if (e.target === dom.appearanceModal) closeAppearanceModal();
+            });
+
+            // Global ESC Key to Close Modals
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' || e.key === 'Esc') {
+                    closeHabitModal();
+                    closeAppearanceModal();
+                }
+            });
+
             // Add/Edit Habit Form Submit
             dom.modalHabitForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 const id = dom.formHabitId.value;
                 const name = dom.formHabitName.value.trim();
-                if (!name) return;
+                if (!name) {
+                    dom.formHabitName.focus();
+                    return;
+                }
 
                 if (id) {
                     const habit = state.habits.find(h => h.id === id);
@@ -750,23 +765,26 @@
                 });
             });
 
-            // Clear All Checkboxes Action
+            // Clear Habit Checkboxes for Current Month
             document.getElementById('clear-all-checkboxes-btn').addEventListener('click', () => {
-                if (confirm('Clear all habit checkmarks for all days?')) {
-                    state.habits.forEach(h => h.records = {});
+                const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                const monthName = monthNames[state.selectedMonth];
+                if (confirm(`Clear all habit checkmarks for ${monthName} ${state.selectedYear}?`)) {
+                    const daysCount = getDaysInMonth(state.selectedYear, state.selectedMonth);
+                    for (let d = 1; d <= daysCount; d++) {
+                        const dateKey = formatDateKey(state.selectedYear, state.selectedMonth, d);
+                        state.habits.forEach(h => {
+                            if (h.records && h.records[dateKey]) delete h.records[dateKey];
+                        });
+                    }
                     saveState();
                     render();
                 }
             });
 
             // Appearance Modal Controls
-            document.getElementById('open-appearance-modal-btn').addEventListener('click', () => {
-                dom.appearanceModal.classList.remove('opacity-0', 'pointer-events-none');
-            });
-
-            document.getElementById('close-appearance-modal-btn').addEventListener('click', () => {
-                dom.appearanceModal.classList.add('opacity-0', 'pointer-events-none');
-            });
+            document.getElementById('open-appearance-modal-btn').addEventListener('click', openAppearanceModal);
+            document.getElementById('close-appearance-modal-btn').addEventListener('click', closeAppearanceModal);
 
             // Mode Selector (Light / Dark / Auto)
             document.querySelectorAll('.mode-btn').forEach(btn => {
@@ -774,6 +792,7 @@
                     themeState.mode = btn.dataset.mode;
                     saveThemeState();
                     applyTheme();
+                    renderSVGSparkline();
                 });
             });
 
@@ -783,8 +802,8 @@
                     const preset = btn.dataset.preset;
                     if (preset === 'standart') {
                         themeState.mode = 'light';
-                        themeState.accent = '#ef4444';
-                        themeState.accentName = 'Red';
+                        themeState.accent = '#4f46e5';
+                        themeState.accentName = 'Indigo';
                         themeState.bgTint = '#f8fafc';
                     } else if (preset === 'ocean') {
                         themeState.mode = 'dark';
@@ -829,6 +848,7 @@
                     }
                     saveThemeState();
                     applyTheme();
+                    renderSVGSparkline();
                 });
             });
 
@@ -839,6 +859,7 @@
                     themeState.accentName = btn.dataset.name;
                     saveThemeState();
                     applyTheme();
+                    renderSVGSparkline();
                 });
             });
 
@@ -869,7 +890,16 @@
                 themeState.fontScale = '1.0';
                 saveThemeState();
                 applyTheme();
+                renderSVGSparkline();
             });
+        }
+
+        function openAppearanceModal() {
+            dom.appearanceModal.classList.remove('opacity-0', 'pointer-events-none');
+        }
+
+        function closeAppearanceModal() {
+            dom.appearanceModal.classList.add('opacity-0', 'pointer-events-none');
         }
 
         function openHabitModal(habit = null) {
@@ -887,7 +917,7 @@
             updateColorSelectionUI();
             dom.habitModal.classList.remove('opacity-0', 'pointer-events-none');
             dom.modalContainer.classList.remove('scale-95');
-            dom.formHabitName.focus();
+            setTimeout(() => dom.formHabitName.focus(), 50);
         }
 
         function closeHabitModal() {
@@ -905,33 +935,38 @@
             });
         }
 
-        // Drag & Drop Reordering Handlers
+        // Drag & Drop Reordering Handlers (Smooth & Anti-Flicker)
         let draggedRowIdx = null;
 
         function handleDragStart(e, idx) {
             draggedRowIdx = idx;
             e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', String(idx));
             e.currentTarget.classList.add('dragging');
         }
 
         function handleDragOver(e) {
-            if (e.preventDefault) e.preventDefault();
+            e.preventDefault();
             e.dataTransfer.dropEffect = 'move';
+            const tr = e.currentTarget;
+            if (!tr.classList.contains('drag-over')) {
+                tr.classList.add('drag-over');
+            }
             return false;
         }
 
-        function handleDragEnter(e) {
-            e.currentTarget.classList.add('drag-over');
-        }
-
         function handleDragLeave(e) {
-            e.currentTarget.classList.remove('drag-over');
+            const tr = e.currentTarget;
+            if (!tr.contains(e.relatedTarget)) {
+                tr.classList.remove('drag-over');
+            }
         }
 
         function handleDrop(e, targetIdx) {
             e.stopPropagation();
             e.preventDefault();
-            e.currentTarget.classList.remove('drag-over');
+            const tr = e.currentTarget;
+            tr.classList.remove('drag-over');
 
             if (draggedRowIdx !== null && draggedRowIdx !== targetIdx) {
                 const movedHabit = state.habits.splice(draggedRowIdx, 1)[0];
@@ -939,6 +974,7 @@
                 saveState();
                 render();
             }
+            draggedRowIdx = null;
             return false;
         }
 
@@ -948,25 +984,35 @@
             draggedRowIdx = null;
         }
 
-        // Render Matrix Table with Month Locking Indicator & Drag Drop Support
+        // Render Matrix Table with Month Indicator & Drag Drop Support
         function renderMatrixTable() {
             const daysCount = getDaysInMonth(state.selectedYear, state.selectedMonth);
             const dayLetters = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
             const isCurrentMonth = (state.selectedYear === TODAY_YEAR && state.selectedMonth === TODAY_MONTH);
 
-            // Update mode instruction text based on month status
-            if (!isCurrentMonth) {
-                dom.modeStatusBadge.className = 'px-2.5 py-1 text-[11px] font-black rounded-md bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300 tracking-wider';
-                dom.modeStatusBadge.textContent = 'READ ONLY';
-                dom.modeInstructionText.textContent = '🔒 This month is locked. You can view records but cannot make check-ins.';
-            } else if (state.isEditMode) {
+            // Update mode instruction text & toolbar status
+            if (state.isEditMode) {
                 dom.modeStatusBadge.className = 'px-2.5 py-1 text-[11px] font-black rounded-md bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 tracking-wider';
                 dom.modeStatusBadge.textContent = 'EDIT MODE';
-                dom.modeInstructionText.textContent = '✋ Drag & drop rows to reorder, or edit/delete titles.';
+                dom.modeInstructionText.textContent = '✋ Drag & drop rows to reorder, or click ✏️ to edit title / 🗑️ to delete.';
+            } else if (!isCurrentMonth) {
+                dom.modeStatusBadge.className = 'px-2.5 py-1 text-[11px] font-black rounded-md bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200 tracking-wider';
+                dom.modeStatusBadge.textContent = 'VIEW MODE';
+                dom.modeInstructionText.textContent = '📅 Browsing past/future month. All days are unlocked for check-ins.';
             } else {
                 dom.modeStatusBadge.className = 'px-2.5 py-1 text-[11px] font-black rounded-md bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200 tracking-wider';
                 dom.modeStatusBadge.textContent = 'VIEW MODE';
-                dom.modeInstructionText.textContent = 'Current month is unlocked! Click any day box to toggle check-ins.';
+                dom.modeInstructionText.textContent = 'Current month is active! Click any day box to toggle check-ins.';
+            }
+
+            // Update Jump to Current Month Button Highlight
+            const jumpBtn = document.getElementById('jump-today-button');
+            if (jumpBtn) {
+                if (!isCurrentMonth) {
+                    jumpBtn.className = 'px-3 py-1 text-xs font-black bg-brand-primary text-white rounded-lg shadow-sm hover:opacity-90 transition';
+                } else {
+                    jumpBtn.className = 'px-3 py-1 text-xs font-extrabold bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-600 transition shadow-xs';
+                }
             }
 
             // Build Header
@@ -979,7 +1025,7 @@
                 const isTodayCell = (isCurrentMonth && d === TODAY_DATE);
 
                 if (isTodayCell) {
-                    theadHTML += `<th class="py-2 px-1 text-center w-10 bg-indigo-100 dark:bg-indigo-950/80 text-brand-primary">
+                    theadHTML += `<th class="py-2 px-1 text-center w-10 bg-indigo-100/70 dark:bg-indigo-950/80 text-brand-primary">
                         <div class="text-[10px]">${dayOfWeek}</div>
                         <div class="w-6 h-6 rounded-full bg-brand-primary text-white mx-auto flex items-center justify-center text-xs font-black">${d}</div>
                     </th>`;
@@ -1000,9 +1046,9 @@
             state.habits.forEach((habit, idx) => {
                 const colorConfig = COLOR_MAP[habit.color] || COLOR_MAP.indigo;
                 let habitMonthDoneCount = 0;
-                const draggableAttrs = (state.isEditMode && isCurrentMonth) ? 
-                    `draggable="true" ondragstart="handleDragStart(event, ${idx})" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, ${idx})" ondragend="handleDragEnd(event)" class="draggable-row hover:bg-slate-50/70 dark:hover:bg-slate-700/40 transition"` : 
-                    `class="hover:bg-slate-50/70 dark:hover:bg-slate-700/40 transition ${!isCurrentMonth ? 'opacity-85' : ''}"`;
+                const draggableAttrs = state.isEditMode ? 
+                    `draggable="true" ondragstart="handleDragStart(event, ${idx})" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, ${idx})" ondragend="handleDragEnd(event)" class="draggable-row hover:bg-slate-50/70 dark:hover:bg-slate-700/40 transition"` : 
+                    `class="hover:bg-slate-50/70 dark:hover:bg-slate-700/40 transition"`;
 
                 tbodyHTML += `<tr ${draggableAttrs}>`;
 
@@ -1010,16 +1056,16 @@
                 tbodyHTML += `<td class="py-2 px-4 sticky-col bg-white dark:bg-slate-800 border-r border-slate-100 dark:border-slate-700/60 min-w-[240px] w-64">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center space-x-2.5 min-w-0 pr-2">
-                            ${state.isEditMode && isCurrentMonth ? '<span class="text-slate-400 cursor-grab select-none text-xs">⋮⋮</span>' : ''}
+                            ${state.isEditMode ? '<span class="text-slate-400 cursor-grab select-none text-xs">⋮⋮</span>' : ''}
                             <span class="text-xs font-black text-slate-600 dark:text-slate-400 font-mono w-4">${idx + 1}.</span>
                             <span class="w-3 h-3 rounded-full ${colorConfig.bg} flex-shrink-0"></span>
                             <span class="font-extrabold text-slate-800 dark:text-slate-100 text-xs truncate" title="${escapeHtml(habit.name)}">${escapeHtml(habit.name)}</span>
                         </div>`;
 
-                if (state.isEditMode && isCurrentMonth) {
+                if (state.isEditMode) {
                     tbodyHTML += `<div class="flex items-center space-x-1 flex-shrink-0">
-                        <button onclick="openHabitModal(state.habits[${idx}])" class="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 text-brand-primary rounded" title="Edit">✏️</button>
-                        <button onclick="deleteHabit('${habit.id}')" class="p-1 hover:bg-rose-100 dark:hover:bg-rose-950 text-rose-500 rounded" title="Delete">🗑️</button>
+                        <button onclick="editHabit('${habit.id}')" class="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 text-brand-primary rounded transition" title="Edit Habit">✏️</button>
+                        <button onclick="deleteHabit('${habit.id}')" class="p-1 hover:bg-rose-100 dark:hover:bg-rose-950 text-rose-500 rounded transition" title="Delete Habit">🗑️</button>
                     </div>`;
                 }
 
@@ -1032,16 +1078,16 @@
                     if (isChecked) habitMonthDoneCount++;
 
                     const isTodayCell = (isCurrentMonth && d === TODAY_DATE);
-                    const cellBgClass = isTodayCell ? 'bg-indigo-50/50 dark:bg-indigo-950/20' : '';
+                    const cellBgClass = isTodayCell ? 'bg-indigo-50/40 dark:bg-indigo-950/20' : '';
 
                     tbodyHTML += `<td class="py-2 px-1 text-center h-12 align-middle ${cellBgClass}">`;
                     
                     if (isChecked) {
-                        tbodyHTML += `<button ${!isCurrentMonth ? 'disabled' : ''} onclick="toggleHabitCheck('${habit.id}', '${dateKey}')" class="cb-box w-7 h-7 rounded-lg ${colorConfig.bg} text-white flex items-center justify-center mx-auto shadow-xs ${!isCurrentMonth ? 'cursor-not-allowed opacity-75' : ''}">
+                        tbodyHTML += `<button onclick="toggleHabitCheck('${habit.id}', '${dateKey}')" class="cb-box w-7 h-7 rounded-lg ${colorConfig.bg} text-white flex items-center justify-center mx-auto shadow-xs hover:opacity-90 active:scale-95 transition" title="${d}-${monthNames[state.selectedMonth]}">
                             <svg class="w-4 h-4 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                         </button>`;
                     } else {
-                        tbodyHTML += `<button ${!isCurrentMonth ? 'disabled' : ''} onclick="toggleHabitCheck('${habit.id}', '${dateKey}')" class="cb-box w-7 h-7 rounded-lg border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 ${isCurrentMonth ? 'hover:border-slate-400 dark:hover:border-slate-500' : 'cursor-not-allowed opacity-50'} mx-auto"></button>`;
+                        tbodyHTML += `<button onclick="toggleHabitCheck('${habit.id}', '${dateKey}')" class="cb-box w-7 h-7 rounded-lg border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-slate-400 dark:hover:border-slate-500 mx-auto active:scale-95 transition" title="${d}-${monthNames[state.selectedMonth]}"></button>`;
                     }
 
                     tbodyHTML += `</td>`;
@@ -1079,11 +1125,11 @@
             let pathD = '';
             points.forEach((pct, idx) => {
                 const x = idx * step;
-                const y = height - (pct * (height - 10)) - 5;
+                const y = height - (pct * (height - 14)) - 7;
                 if (idx === 0) {
-                    pathD += `M ${x} ${y}`;
+                    pathD += `M ${x.toFixed(1)} ${y.toFixed(1)}`;
                 } else {
-                    pathD += ` L ${x} ${y}`;
+                    pathD += ` L ${x.toFixed(1)} ${y.toFixed(1)}`;
                 }
             });
 
@@ -1092,24 +1138,27 @@
             dom.svgTrendChart.innerHTML = `
                 <defs>
                     <linearGradient id="trendGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stop-color="var(--brand-600, #4f46e5)" stop-opacity="0.35"/>
-                        <stop offset="100%" stop-color="var(--brand-600, #4f46e5)" stop-opacity="0.0"/>
+                        <stop offset="0%" stop-color="${themeState.accent}" stop-opacity="0.35"/>
+                        <stop offset="100%" stop-color="${themeState.accent}" stop-opacity="0.0"/>
                     </linearGradient>
                 </defs>
                 <path d="${areaD}" fill="url(#trendGradient)" />
-                <path d="${pathD}" fill="none" stroke="var(--brand-600, #4f46e5)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="${pathD}" fill="none" stroke="${themeState.accent}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
             `;
         }
 
         function escapeHtml(str) {
-            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
         }
 
         // Global Habit Action Handlers
         window.toggleHabitCheck = function(habitId, dateKey) {
-            // Only allow toggling if in current active month
-            if (state.selectedYear !== TODAY_YEAR || state.selectedMonth !== TODAY_MONTH) return;
-
             const habit = state.habits.find(h => h.id === habitId);
             if (!habit) return;
 
@@ -1133,6 +1182,21 @@
             }
         };
 
+        window.editHabit = function(habitId) {
+            const habit = state.habits.find(h => h.id === habitId);
+            if (habit) openHabitModal(habit);
+        };
+
+        window.openHabitModal = openHabitModal;
+        window.closeHabitModal = closeHabitModal;
+        window.openAppearanceModal = openAppearanceModal;
+        window.closeAppearanceModal = closeAppearanceModal;
+        window.handleDragStart = handleDragStart;
+        window.handleDragOver = handleDragOver;
+        window.handleDragLeave = handleDragLeave;
+        window.handleDrop = handleDrop;
+        window.handleDragEnd = handleDragEnd;
+
         // Master Render Function
         function render() {
             // Render Header Month Display
@@ -1140,7 +1204,7 @@
             dom.monthDisplayName.textContent = `${monthNames[state.selectedMonth]} ${state.selectedYear}`;
 
             // Render Today Info Wireframe Date
-            dom.wireframeDate.textContent = formatDisplayWireframeDate(state.currentDate);
+            dom.wireframeDate.textContent = formatDisplayWireframeDate(new Date());
 
             // Toggle Empty State View
             if (!state.habits || state.habits.length === 0) {
