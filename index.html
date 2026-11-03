@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Habit Tracker Pro</title>
+    <!-- Custom Site Mark / Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%236366f1'><path d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z'/></svg>">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: 'var(--brand-50, #eef2ff)',
+                            100: 'var(--brand-100, #e0e7ff)',
+                            500: 'var(--brand-500, #6366f1)',
+                            600: 'var(--brand-600, #4f46e5)',
+                            700: 'var(--brand-700, #4338ca)',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --brand-50: #eef2ff;
+            --brand-100: #e0e7ff;
+            --brand-500: #6366f1;
+            --brand-600: #4f46e5;
+            --brand-700: #4338ca;
+            --bg-tint: #f8fafc;
+            --font-scale: 1;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-tint) !important;
+            font-size: calc(1rem * var(--font-scale));
+            -webkit-tap-highlight-color: transparent;
+            transition: background-color 0.25s ease;
+        }
+
+        /* Custom Accent Override Classes */
+        .bg-brand-primary { background-color: var(--brand-600) !important; }
+        .text-brand-primary { color: var(--brand-600) !important; }
+        .border-brand-primary { border-color: var(--brand-600) !important; }
+        .ring-brand-primary { --tw-ring-color: var(--brand-600) !important; }
+
+        /* Custom Scrollbar */
+        .matrix-scroll::-webkit-scrollbar {
+            height: 6px;
+            width: 6px;
+        }
+        .matrix-scroll::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 4px;
+        }
+        .matrix-scroll::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.5);
+            border-radius: 4px;
+        }
+
+        .sticky-col {
+            position: sticky;
+            left: 0;
+            z-index: 20;
+        }
+        .sticky-col-header {
+            position: sticky;
+            left: 0;
+            z-index: 30;
+        }
+
+        /* Drag & Drop Reorder Styles */
+        tr.draggable-row {
+            cursor: grab;
+            transition: background-color 0.15s ease, opacity 0.15s ease;
+        }
+        tr.draggable-row:active {
+            cursor: grabbing;
+        }
+        tr.dragging {
+            opacity: 0.4;
+            background-color: rgba(99, 102, 241, 0.1) !important;
+        }
+        tr.drag-over {
+            border-top: 3px solid var(--brand-600, #4f46e5) !important;
+        }
+
+        .cb-box {
+            transition: transform 0.1s ease, background-color 0.15s ease, border-color 0.15s ease;
+        }
+        .cb-box:not(:disabled):hover {
+            transform: scale(1.12);
+        }
+        .cb-box:not(:disabled):active {
+            transform: scale(0.95);
+        }
+
+        .toggle-switch-bg { transition: background-color 0.2s ease; }
+        .toggle-switch-knob { transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+    </style>
+</head>
+<body class="text-slate-900 dark:text-slate-100 h-screen w-screen overflow-hidden flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700/80 px-4 sm:px-6 py-3 flex-shrink-0 z-30 shadow-sm">
+        <div class="max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-3">
+            
+            <!-- Logo & Brand Site Mark -->
+            <div class="flex items-center space-x-3 flex-shrink-0">
+                <div class="p-2 bg-brand-primary text-white rounded-xl shadow-md flex items-center justify-center flex-shrink-0">
+                    <!-- Target Checkmark Site Mark Icon -->
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="9" stroke-width="2"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4"/>
+                    </svg>
+                </div>
+                <div class="whitespace-nowrap flex flex-col justify-center">
+                    <h1 class="text-base sm:text-lg font-black tracking-tight text-slate-900 dark:text-white leading-tight whitespace-nowrap flex items-center gap-1.5">
+                        Habit Tracker <span class="text-brand-primary">Pro</span>
+                    </h1>
+                    <p class="text-[10px] sm:text-[11px] text-slate-600 dark:text-slate-400 font-semibold">Daily Checklist & Performance</p>
+                </div>
+            </div>
+
+            <!-- Month Controls, Theme Settings & Mode Switcher -->
+            <div class="flex items-center flex-wrap gap-2.5">
+                <!-- Month Navigator -->
+                <div class="flex items-center bg-slate-100 dark:bg-slate-700/70 p-1 rounded-xl border border-slate-200 dark:border-slate-600">
+                    <button id="prev-month-btn" class="p-1.5 text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-600 rounded-lg transition" title="Previous Month">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+                    </button>
+                    <span id="month-display-name" class="px-3 text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-100 min-w-[130px] text-center">
+                        OCTOBER 2026
+                    </span>
+                    <button id="next-month-btn" class="p-1.5 text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-600 rounded-lg transition" title="Next Month">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+                    </button>
+                </div>
+
+                <!-- Appearance Customization Settings Button -->
+                <button id="open-appearance-modal-btn" class="p-2 bg-slate-100 dark:bg-slate-700/70 text-slate-700 dark:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-600 rounded-xl border border-slate-200 dark:border-slate-600 transition flex items-center justify-center" title="Ko'rinish sozlamalari">
+                    <svg class="w-5 h-5 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+                    </svg>
+                </button>
+
+                <!-- Clear All Checkboxes Button -->
+                <button id="clear-all-checkboxes-btn" class="p-2 bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900 rounded-xl border border-rose-200 dark:border-rose-800 transition flex items-center justify-center" title="Clear All Checkboxes">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </button>
+
+                <!-- Edit Mode Toggle Switch -->
+                <button id="edit-mode-toggle" type="button" class="flex items-center space-x-2 bg-slate-100 dark:bg-slate-700/70 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-slate-200/60 dark:hover:bg-slate-600/80 transition" role="switch" aria-checked="false">
+                    <span class="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-200">EDIT MODE</span>
+                    <div id="toggle-bg" class="toggle-switch-bg w-9 h-5 rounded-full bg-slate-300 dark:bg-slate-500 relative p-0.5">
+                        <div id="toggle-knob" class="toggle-switch-knob w-4 h-4 rounded-full bg-white shadow-md transform translate-x-0"></div>
+                    </div>
+                </button>
+
+                <!-- Add Habit Button -->
+                <button id="open-add-habit-btn" class="flex items-center space-x-1.5 bg-brand-primary hover:opacity-90 active:scale-95 text-white px-3.5 py-2 rounded-xl text-xs font-extrabold shadow-md transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+                    <span>Add Habit</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Fullscreen Layout Body -->
+    <main class="flex-grow max-w-[1600px] w-full mx-auto p-3 sm:p-5 flex flex-col space-y-4 overflow-hidden">
+
+        <!-- STATS DASHBOARD ROW -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 flex-shrink-0">
+
+            <!-- Card 1: Today's Date -->
+            <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700/80 flex flex-col justify-between">
+                <div class="flex items-center justify-between text-slate-700 dark:text-slate-300 mb-1">
+                    <span class="text-xs uppercase font-extrabold tracking-wider text-brand-primary">DATE</span>
+                    <svg class="w-5 h-5 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                </div>
+                <div>
+                    <div class="text-xs text-slate-700 dark:text-slate-300 font-extrabold uppercase tracking-wider" id="today-word">TODAY</div>
+                    <div class="text-3xl font-black text-slate-900 dark:text-white tracking-tight" id="wireframe-formatted-date">
+                        31.10.26
+                    </div>
+                </div>
+                <div class="mt-2 pt-2 border-t border-slate-100 dark:border-slate-700/60 flex justify-between items-center text-xs text-slate-700 dark:text-slate-300 font-semibold">
+                    <span>Habits Active:</span>
+                    <span id="active-habits-count" class="font-extrabold text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-600">0</span>
+                </div>
+            </div>
+
+            <!-- Card 2: Today's Goal Progress Ring -->
+            <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700/80 flex items-center justify-between">
+                <div class="flex flex-col justify-between h-full space-y-1">
+                    <div>
+                        <span class="text-xs uppercase font-extrabold tracking-wider text-slate-700 dark:text-slate-300">DAILY COMPLETION</span>
+                        <h3 class="text-base font-black text-slate-900 dark:text-white mt-0.5">Today's Goal</h3>
+                    </div>
+                    <div class="text-xs text-slate-700 dark:text-slate-300 font-bold">
+                        <span id="completed-count-badge" class="font-black text-brand-primary">0 of 0</span> done today
+                    </div>
+                </div>
+
+                <!-- Dynamic Circular SVG Donut Chart -->
+                <div class="relative w-20 h-20 sm:w-22 sm:h-22 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                        <path class="text-slate-200 dark:text-slate-700" stroke-width="3.8" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                        <path id="donut-progress-path" class="text-brand-primary transition-all duration-300 ease-out" stroke-dasharray="0, 100" stroke-width="3.8" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span id="completion-percentage-text" class="text-lg font-black text-slate-900 dark:text-white">0%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 3: Monthly Progress Trend Line -->
+            <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700/80 flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-1">
+                    <span class="text-xs uppercase font-extrabold tracking-wider text-slate-700 dark:text-slate-300">MONTHLY PROGRESS</span>
+                    <span class="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 flex items-center gap-1">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg> Trend
+                    </span>
+                </div>
+                <!-- Pure SVG Line Chart -->
+                <div class="h-16 w-full relative">
+                    <svg id="svg-trend-chart" class="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 300 80">
+                        <!-- Rendered dynamically -->
+                    </svg>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- HABIT MATRIX TABLE CONTAINER (Fills Remaining Screen Height) -->
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700/80 flex-1 min-h-0 flex flex-col overflow-hidden">
+            
+            <!-- Status Information Toolbar -->
+            <div class="px-4 py-2.5 border-b border-slate-200 dark:border-slate-700/80 flex flex-wrap items-center justify-between gap-2 bg-slate-50 dark:bg-slate-800/90 flex-shrink-0">
+                <div class="flex items-center space-x-2.5">
+                    <span id="mode-status-badge" class="px-2.5 py-1 text-[11px] font-black rounded-md bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200 tracking-wider">
+                        VIEW MODE
+                    </span>
+                    <span class="text-xs text-slate-700 dark:text-slate-300 font-bold" id="mode-instruction-text">
+                        Current month active for check-ins!
+                    </span>
+                </div>
+                <button id="jump-today-button" class="px-3 py-1 text-xs font-extrabold bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-600 transition shadow-xs">
+                    Jump to Current Month
+                </button>
+            </div>
+
+            <!-- Scrollable Matrix Viewport -->
+            <div class="overflow-x-auto overflow-y-auto matrix-scroll flex-1 w-full">
+                <table class="w-full text-left border-collapse min-w-max">
+                    <thead id="matrix-thead" class="sticky top-0 z-20">
+                        <!-- Header headers rendered via JS -->
+                    </thead>
+                    <tbody id="habits-table-body" class="divide-y divide-slate-200/80 dark:divide-slate-700/60 text-sm">
+                        <!-- Matrix rows rendered via JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Empty State View -->
+            <div id="empty-state-view" class="hidden p-8 text-center flex-1 flex flex-col items-center justify-center">
+                <div class="w-12 h-12 bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 rounded-full flex items-center justify-center mb-2">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                </div>
+                <h3 class="text-sm font-black text-slate-900 dark:text-white">No Habits Created Yet</h3>
+                <p class="text-xs text-slate-600 dark:text-slate-400 max-w-xs mt-1 mb-3 font-medium">Add daily tasks to track your goals across the month.</p>
+                <button id="empty-add-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-extrabold shadow-md shadow-indigo-500/20">
+                    + Add First Habit
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal Form (Add / Edit Habit) -->
+    <div id="habit-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-200">
+        <div id="modal-container" class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 max-w-md w-full p-5 space-y-4 transform scale-95 transition-transform duration-200">
+            <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-2.5">
+                <h3 id="modal-title-text" class="text-base font-black text-slate-900 dark:text-white">Add New Habit</h3>
+                <button id="close-modal-x" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <form id="modal-habit-form" class="space-y-4">
+                <input type="hidden" id="form-habit-id" value="">
+                
+                <div>
+                    <label for="form-habit-name" class="block text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">Habit Title</label>
+                    <input type="text" id="form-habit-name" required placeholder="e.g. Morning Workout" class="w-full px-3 py-2 text-xs font-bold bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary">
+                </div>
+
+                <div>
+                    <span class="block text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Badge Color</span>
+                    <div id="form-color-picker" class="flex items-center space-x-3">
+                        <button type="button" data-color="indigo" class="color-opt w-7 h-7 rounded-full bg-indigo-600 transition hover:scale-110"></button>
+                        <button type="button" data-color="emerald" class="color-opt w-7 h-7 rounded-full bg-emerald-500 transition hover:scale-110"></button>
+                        <button type="button" data-color="amber" class="color-opt w-7 h-7 rounded-full bg-amber-500 transition hover:scale-110"></button>
+                        <button type="button" data-color="rose" class="color-opt w-7 h-7 rounded-full bg-rose-500 transition hover:scale-110"></button>
+                        <button type="button" data-color="cyan" class="color-opt w-7 h-7 rounded-full bg-cyan-500 transition hover:scale-110"></button>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end space-x-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                    <button type="button" id="modal-cancel-btn" class="px-3.5 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl">Cancel</button>
+                    <button type="submit" class="px-4 py-1.5 text-xs font-extrabold text-white bg-brand-primary hover:opacity-90 rounded-xl shadow-md">Save Habit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- APPEARANCE CUSTOMIZATION MODAL (Appearance Settings) -->
+    <div id="appearance-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-200">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-lg w-full p-6 space-y-5 max-h-[90vh] overflow-y-auto matrix-scroll">
+            
+            <!-- Header -->
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="p-2.5 bg-indigo-100 dark:bg-indigo-950 text-brand-primary rounded-2xl">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-black text-slate-900 dark:text-white">Appearance Settings</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Your preferences are saved in this browser</p>
+                    </div>
+                </div>
+                <button id="close-appearance-modal-btn" class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <!-- Preset Presets Section (PRESET THEMES) -->
+            <div>
+                <span class="text-[11px] font-black tracking-wider text-slate-400 dark:text-slate-500 uppercase">PRESET THEMES</span>
+                <div class="grid grid-cols-3 gap-2.5 mt-2" id="preset-grid">
+                    <button data-preset="standart" class="preset-btn p-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-left hover:border-brand-primary transition">
+                        <div class="h-6 rounded-lg bg-red-500 mb-2 relative overflow-hidden flex items-center justify-end px-1.5"><div class="w-2.5 h-2.5 rounded-full bg-red-300"></div></div>
+                        <span class="text-xs font-black text-slate-800 dark:text-slate-200">Standard</span>
+                    </button>
+                    <button data-preset="ocean" class="preset-btn p-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-900 text-left hover:border-brand-primary transition">
+                        <div class="h-6 rounded-lg bg-blue-600 mb-2 relative overflow-hidden flex items-center justify-end px-1.5"><div class="w-2.5 h-2.5 rounded-full bg-blue-900"></div></div>
+                        <span class="text-xs font-black text-white">Deep Ocean</span>
+                    </button>
+                    <button data-preset="forest" class="preset-btn p-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-emerald-50 dark:bg-slate-900 text-left hover:border-brand-primary transition">
+                        <div class="h-6 rounded-lg bg-emerald-600 mb-2 relative overflow-hidden flex items-center justify-end px-1.5"><div class="w-2.5 h-2.5 rounded-full bg-emerald-300"></div></div>
+                        <span class="text-xs font-black text-slate-800 dark:text-slate-200">Forest</span>
+                    </button>
+                    <button data-preset="sakura" class="preset-btn p-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-rose-50 dark:bg-slate-900 text-left hover:border-brand-primary transition">
+                        <div class="h-6 rounded-lg bg-pink-500 mb-2 relative overflow-hidden flex items-center justify-end px-1.5"><div class="w-2.5 h-2.5 rounded-full bg-pink-300"></div></div>
+                        <span class="text-xs font-black text-slate-800 dark:text-slate-200">Sakura</span>
+                    </button>
+                    <button data-preset="graphite" class="preset-btn p-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-900 text-left hover:border-brand-primary transition">
+                        <div class="h-6 rounded-lg bg-cyan-500 mb-2 relative overflow-hidden flex items-center justify-end px-1.5"><div class="w-2.5 h-2.5 rounded-full bg-cyan-800"></div></div>
+                        <span class="text-xs font-black text-white">Graphite</span>
+                    </button>
+                    <button data-preset="sunset" class="preset-btn p-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-900 text-left hover:border-brand-primary transition">
+                        <div class="h-6 rounded-lg bg-amber-500 mb-2 relative overflow-hidden flex items-center justify-end px-1.5"><div class="w-2.5 h-2.5 rounded-full bg-amber-800"></div></div>
+                        <span class="text-xs font-black text-white">Sunset</span>
+                    </button>
+                    <button data-preset="lavender" class="preset-btn p-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-indigo-50 dark:bg-slate-900 text-left hover:border-brand-primary transition">
+                        <div class="h-6 rounded-lg bg-indigo-600 mb-2 relative overflow-hidden flex items-center justify-end px-1.5"><div class="w-2.5 h-2.5 rounded-full bg-indigo-300"></div></div>
+                        <span class="text-xs font-black text-slate-800 dark:text-slate-200">Lavender</span>
+                    </button>
+                    <button data-preset="cherry" class="preset-btn p-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-rose-950 text-left hover:border-brand-primary transition">
+                        <div class="h-6 rounded-lg bg-rose-600 mb-2 relative overflow-hidden flex items-center justify-end px-1.5"><div class="w-2.5 h-2.5 rounded-full bg-rose-900"></div></div>
+                        <span class="text-xs font-black text-white">Cherry</span>
+                    </button>
+                    <button data-preset="minimal" class="preset-btn p-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 text-left hover:border-brand-primary transition">
+                        <div class="h-6 rounded-lg bg-slate-600 mb-2 relative overflow-hidden flex items-center justify-end px-1.5"><div class="w-2.5 h-2.5 rounded-full bg-slate-400"></div></div>
+                        <span class="text-xs font-black text-slate-800 dark:text-slate-200">Minimal</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Theme Mode Switcher (MODE) -->
+            <div>
+                <span class="text-[11px] font-black tracking-wider text-slate-400 dark:text-slate-500 uppercase">MODE</span>
+                <div class="grid grid-cols-3 gap-2 bg-slate-100 dark:bg-slate-900 p-1.5 rounded-2xl mt-2">
+                    <button data-mode="light" class="mode-btn py-2 rounded-xl text-xs font-extrabold flex items-center justify-center space-x-1.5 text-slate-600 dark:text-slate-400 transition">
+                        <span>☀️ Light</span>
+                    </button>
+                    <button data-mode="dark" class="mode-btn py-2 rounded-xl text-xs font-extrabold flex items-center justify-center space-x-1.5 text-slate-600 dark:text-slate-400 transition">
+                        <span>🌙 Dark</span>
+                    </button>
+                    <button data-mode="auto" class="mode-btn py-2 rounded-xl text-xs font-extrabold flex items-center justify-center space-x-1.5 text-slate-600 dark:text-slate-400 transition">
+                        <span>💻 System</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Primary Accent Color (PRIMARY COLOR) -->
+            <div>
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-[11px] font-black tracking-wider text-slate-400 dark:text-slate-500 uppercase">PRIMARY COLOR</span>
+                    <span id="active-accent-name" class="text-xs font-black text-indigo-600 dark:text-indigo-400">Indigo</span>
+                </div>
+                <div class="flex flex-wrap gap-3" id="accent-swatch-list">
+                    <button data-accent="#ef4444" data-name="Red" class="accent-swatch w-8 h-8 rounded-full bg-red-500 hover:scale-110 transition"></button>
+                    <button data-accent="#2563eb" data-name="Blue" class="accent-swatch w-8 h-8 rounded-full bg-blue-600 hover:scale-110 transition"></button>
+                    <button data-accent="#4f46e5" data-name="Indigo" class="accent-swatch w-8 h-8 rounded-full bg-indigo-600 ring-2 ring-offset-2 ring-indigo-600 hover:scale-110 transition"></button>
+                    <button data-accent="#ec4899" data-name="Pink" class="accent-swatch w-8 h-8 rounded-full bg-pink-500 hover:scale-110 transition"></button>
+                    <button data-accent="#be123c" data-name="Crimson" class="accent-swatch w-8 h-8 rounded-full bg-rose-700 hover:scale-110 transition"></button>
+                    <button data-accent="#d97706" data-name="Amber" class="accent-swatch w-8 h-8 rounded-full bg-amber-600 hover:scale-110 transition"></button>
+                    <button data-accent="#10b981" data-name="Emerald" class="accent-swatch w-8 h-8 rounded-full bg-emerald-500 hover:scale-110 transition"></button>
+                    <button data-accent="#0891b2" data-name="Cyan" class="accent-swatch w-8 h-8 rounded-full bg-cyan-600 hover:scale-110 transition"></button>
+                    <button data-accent="#334155" data-name="Slate" class="accent-swatch w-8 h-8 rounded-full bg-slate-700 hover:scale-110 transition"></button>
+                </div>
+            </div>
+
+            <!-- Background Tint (BACKGROUND TINT) -->
+            <div>
+                <span class="text-[11px] font-black tracking-wider text-slate-400 dark:text-slate-500 uppercase">BACKGROUND TINT</span>
+                <div class="grid grid-cols-5 gap-2 mt-2" id="bg-tint-grid">
+                    <button data-tint="#fefce8" class="bg-tint-btn p-3 rounded-2xl bg-amber-50/80 border border-amber-200 text-center"><span class="text-[10px] font-bold text-slate-700">Warm</span></button>
+                    <button data-tint="#f8fafc" class="bg-tint-btn p-3 rounded-2xl bg-slate-100 border-2 border-indigo-600 text-center"><span class="text-[10px] font-extrabold text-slate-900">Neutral</span></button>
+                    <button data-tint="#f0f9ff" class="bg-tint-btn p-3 rounded-2xl bg-sky-50/80 border border-sky-200 text-center"><span class="text-[10px] font-bold text-slate-700">Cool</span></button>
+                    <button data-tint="#ecfdf5" class="bg-tint-btn p-3 rounded-2xl bg-emerald-50/80 border border-emerald-200 text-center"><span class="text-[10px] font-bold text-slate-700">Mint</span></button>
+                    <button data-tint="#fdf2f8" class="bg-tint-btn p-3 rounded-2xl bg-pink-50/80 border border-pink-200 text-center"><span class="text-[10px] font-bold text-slate-700">Blush</span></button>
+                </div>
+            </div>
+
+            <!-- Font Scale (TEXT SIZE) -->
+            <div>
+                <span class="text-[11px] font-black tracking-wider text-slate-400 dark:text-slate-500 uppercase">TEXT SIZE</span>
+                <div class="grid grid-cols-4 gap-2 bg-slate-100 dark:bg-slate-900 p-1.5 rounded-2xl mt-2" id="font-scale-grid">
+                    <button data-scale="0.9" class="scale-btn py-2 rounded-xl text-xs font-extrabold text-slate-600 dark:text-slate-400">A-</button>
+                    <button data-scale="1.0" class="scale-btn py-2 rounded-xl text-xs font-black bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs">A</button>
+                    <button data-scale="1.1" class="scale-btn py-2 rounded-xl text-xs font-extrabold text-slate-600 dark:text-slate-400">A+</button>
+                    <button data-scale="1.2" class="scale-btn py-2 rounded-xl text-xs font-extrabold text-slate-600 dark:text-slate-400">A++</button>
+                </div>
+            </div>
+
+            <!-- Footer Quick Reset -->
+            <div class="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-slate-700">
+                <span class="text-xs text-slate-500 font-medium">Quick switch in mode buttons</span>
+                <button id="reset-theme-btn" class="px-3 py-1.5 text-xs font-extrabold bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-200 transition">
+                    🔄 Reset Default
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Script -->
+    <script>
+        // Actual System Today Date Context
+        const TODAY = new Date();
+        const TODAY_YEAR = TODAY.getFullYear();
+        const TODAY_MONTH = TODAY.getMonth();
+        const TODAY_DATE = TODAY.getDate();
+
+        // Theme State
+        const themeState = {
+            mode: 'light',
+            accent: '#4f46e5',
+            accentName: 'Indigo',
+            bgTint: '#f8fafc',
+            fontScale: '1.0'
+        };
+
+        // State Management
+        const state = {
+            currentDate: TODAY,
+            selectedYear: TODAY_YEAR,
+            selectedMonth: TODAY_MONTH,
+            isEditMode: false,
+            selectedColor: 'indigo',
+            habits: []
+        };
+
+        const COLOR_MAP = {
+            indigo: { bg: 'bg-indigo-600', border: 'border-indigo-600', text: 'text-indigo-600' },
+            emerald: { bg: 'bg-emerald-500', border: 'border-emerald-500', text: 'text-emerald-500' },
+            amber: { bg: 'bg-amber-500', border: 'border-amber-500', text: 'text-amber-500' },
+            rose: { bg: 'bg-rose-500', border: 'border-rose-500', text: 'text-rose-500' },
+            cyan: { bg: 'bg-cyan-500', border: 'border-cyan-500', text: 'text-cyan-500' }
+        };
+
+        // DOM Elements
+        const dom = {
+            wireframeDate: document.getElementById('wireframe-formatted-date'),
+            monthDisplayName: document.getElementById('month-display-name'),
+            activeHabitsCount: document.getElementById('active-habits-count'),
+            completedCountBadge: document.getElementById('completed-count-badge'),
+            completionPctText: document.getElementById('completion-percentage-text'),
+            donutPath: document.getElementById('donut-progress-path'),
+            svgTrendChart: document.getElementById('svg-trend-chart'),
+            matrixThead: document.getElementById('matrix-thead'),
+            habitsTableBody: document.getElementById('habits-table-body'),
+            emptyStateView: document.getElementById('empty-state-view'),
+            editModeToggle: document.getElementById('edit-mode-toggle'),
+            toggleBg: document.getElementById('toggle-bg'),
+            toggleKnob: document.getElementById('toggle-knob'),
+            modeStatusBadge: document.getElementById('mode-status-badge'),
+            modeInstructionText: document.getElementById('mode-instruction-text'),
+            habitModal: document.getElementById('habit-modal'),
+            modalContainer: document.getElementById('modal-container'),
+            modalHabitForm: document.getElementById('modal-habit-form'),
+            formHabitId: document.getElementById('form-habit-id'),
+            formHabitName: document.getElementById('form-habit-name'),
+            modalTitleText: document.getElementById('modal-title-text'),
+            appearanceModal: document.getElementById('appearance-modal')
+        };
+
+        // Initialize App
+        function init() {
+            loadState();
+            loadThemeState();
+            applyTheme();
+            if (!state.habits || state.habits.length === 0) {
+                seedInitialData();
+            }
+            bindEvents();
+            render();
+        }
+
+        // Local Storage State Handlers
+        function loadState() {
+            try {
+                const saved = localStorage.getItem('habit_tracker_state');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    state.habits = parsed.habits || [];
+                }
+            } catch (e) {
+                console.error("Failed to load habit state:", e);
+                state.habits = [];
+            }
+        }
+
+        function saveState() {
+            try {
+                localStorage.setItem('habit_tracker_state', JSON.stringify({
+                    habits: state.habits
+                }));
+            } catch (e) {
+                console.error("Failed to save habit state:", e);
+            }
+        }
+
+        function loadThemeState() {
+            try {
+                const saved = localStorage.getItem('habit_tracker_theme');
+                if (saved) {
+                    Object.assign(themeState, JSON.parse(saved));
+                }
+            } catch (e) {
+                console.error("Failed to load theme state:", e);
+            }
+        }
+
+        function saveThemeState() {
+            try {
+                localStorage.setItem('habit_tracker_theme', JSON.stringify(themeState));
+            } catch (e) {
+                console.error("Failed to save theme state:", e);
+            }
+        }
+
+        function seedInitialData() {
+            state.habits = [
+                { id: 'h1', name: 'Morning Workout & Stretch', color: 'emerald', records: {} },
+                { id: 'h2', name: 'Read 20 Pages of Book', color: 'indigo', records: {} },
+                { id: 'h3', name: 'Hydrate 2.5L Water Daily', color: 'cyan', records: {} },
+                { id: 'h4', name: 'Mindfulness Meditation', color: 'rose', records: {} }
+            ];
+            saveState();
+        }
+
+        // Theme Customization Handlers
+        function applyTheme() {
+            // Apply Dark/Light Mode
+            const isDark = themeState.mode === 'dark' || (themeState.mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            if (isDark) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+
+            // Update Mode Selector Button Active States
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                if (btn.dataset.mode === themeState.mode) {
+                    btn.className = 'mode-btn py-2 rounded-xl text-xs font-black flex items-center justify-center space-x-1.5 bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs';
+                } else {
+                    btn.className = 'mode-btn py-2 rounded-xl text-xs font-extrabold flex items-center justify-center space-x-1.5 text-slate-600 dark:text-slate-400 transition';
+                }
+            });
+
+            // Apply Accent Color & Tint Variables
+            document.documentElement.style.setProperty('--brand-500', themeState.accent);
+            document.documentElement.style.setProperty('--brand-600', themeState.accent);
+            document.documentElement.style.setProperty('--bg-tint', themeState.bgTint);
+            document.documentElement.style.setProperty('--font-scale', themeState.fontScale);
+            document.body.style.backgroundColor = themeState.bgTint;
+
+            const activeNameEl = document.getElementById('active-accent-name');
+            if (activeNameEl) {
+                activeNameEl.textContent = themeState.accentName;
+                activeNameEl.style.color = themeState.accent;
+            }
+
+            // Update Primary Color Swatches Active Border / Focus Ring
+            document.querySelectorAll('.accent-swatch').forEach(swatch => {
+                if (swatch.dataset.accent.toLowerCase() === themeState.accent.toLowerCase()) {
+                    swatch.style.boxShadow = `0 0 0 3px #ffffff, 0 0 0 6px ${themeState.accent}`;
+                } else {
+                    swatch.style.boxShadow = 'none';
+                }
+            });
+
+            // Update Background Tint Buttons Active Border / Focus Ring
+            document.querySelectorAll('.bg-tint-btn').forEach(btn => {
+                if (btn.dataset.tint.toLowerCase() === themeState.bgTint.toLowerCase()) {
+                    btn.style.borderColor = themeState.accent;
+                    btn.style.borderWidth = '2px';
+                } else {
+                    btn.style.borderColor = '';
+                    btn.style.borderWidth = '1px';
+                }
+            });
+
+            // Update Text Size Buttons Active State
+            document.querySelectorAll('.scale-btn').forEach(btn => {
+                if (btn.dataset.scale === themeState.fontScale) {
+                    btn.className = 'scale-btn py-2 rounded-xl text-xs font-black bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs';
+                } else {
+                    btn.className = 'scale-btn py-2 rounded-xl text-xs font-extrabold text-slate-600 dark:text-slate-400';
+                }
+            });
+        }
+
+        // Date & Days Helper Utilities
+        function getDaysInMonth(year, month) {
+            return new Date(year, month + 1, 0).getDate();
+        }
+
+        function formatDateKey(year, month, day) {
+            const m = String(month + 1).padStart(2, '0');
+            const d = String(day).padStart(2, '0');
+            return `${year}-${m}-${d}`;
+        }
+
+        function formatDisplayWireframeDate(dateObj) {
+            const d = String(dateObj.getDate()).padStart(2, '0');
+            const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const y = String(dateObj.getFullYear()).slice(-2);
+            return `${d}.${m}.${y}`;
+        }
+
+        // Event Listeners Binding
+        function bindEvents() {
+            // Month navigation
+            document.getElementById('prev-month-btn').addEventListener('click', () => {
+                state.selectedMonth--;
+                if (state.selectedMonth < 0) {
+                    state.selectedMonth = 11;
+                    state.selectedYear--;
+                }
+                render();
+            });
+
+            document.getElementById('next-month-btn').addEventListener('click', () => {
+                state.selectedMonth++;
+                if (state.selectedMonth > 11) {
+                    state.selectedMonth = 0;
+                    state.selectedYear++;
+                }
+                render();
+            });
+
+            document.getElementById('jump-today-button').addEventListener('click', () => {
+                state.selectedYear = TODAY_YEAR;
+                state.selectedMonth = TODAY_MONTH;
+                render();
+            });
+
+            // Edit mode toggle
+            dom.editModeToggle.addEventListener('click', () => {
+                state.isEditMode = !state.isEditMode;
+                dom.editModeToggle.setAttribute('aria-checked', state.isEditMode ? 'true' : 'false');
+                if (state.isEditMode) {
+                    dom.toggleBg.className = 'toggle-switch-bg w-9 h-5 rounded-full bg-brand-primary relative p-0.5';
+                    dom.toggleKnob.className = 'toggle-switch-knob w-4 h-4 rounded-full bg-white shadow-md transform translate-x-4';
+                    dom.modeStatusBadge.className = 'px-2.5 py-1 text-[11px] font-black rounded-md bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 tracking-wider';
+                    dom.modeStatusBadge.textContent = 'EDIT MODE';
+                    dom.modeInstructionText.textContent = 'Reorder, edit titles, or remove habits below.';
+                } else {
+                    dom.toggleBg.className = 'toggle-switch-bg w-9 h-5 rounded-full bg-slate-300 dark:bg-slate-500 relative p-0.5';
+                    dom.toggleKnob.className = 'toggle-switch-knob w-4 h-4 rounded-full bg-white shadow-md transform translate-x-0';
+                    dom.modeStatusBadge.className = 'px-2.5 py-1 text-[11px] font-black rounded-md bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200 tracking-wider';
+                    dom.modeStatusBadge.textContent = 'VIEW MODE';
+                    dom.modeInstructionText.textContent = 'All days across the month are unlocked! Click any day box to toggle check-ins and test progress.';
+                }
+                render();
+            });
+
+            // Modal Open & Close Triggers
+            document.getElementById('open-add-habit-btn').addEventListener('click', () => openHabitModal());
+            document.getElementById('empty-add-btn').addEventListener('click', () => openHabitModal());
+            document.getElementById('close-modal-x').addEventListener('click', closeHabitModal);
+            document.getElementById('modal-cancel-btn').addEventListener('click', closeHabitModal);
+
+            // Add/Edit Habit Form Submit
+            dom.modalHabitForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const id = dom.formHabitId.value;
+                const name = dom.formHabitName.value.trim();
+                if (!name) return;
+
+                if (id) {
+                    const habit = state.habits.find(h => h.id === id);
+                    if (habit) {
+                        habit.name = name;
+                        habit.color = state.selectedColor;
+                    }
+                } else {
+                    state.habits.push({
+                        id: 'h_' + Date.now(),
+                        name: name,
+                        color: state.selectedColor,
+                        records: {}
+                    });
+                }
+
+                saveState();
+                closeHabitModal();
+                render();
+            });
+
+            // Badge Color Options Selector
+            document.querySelectorAll('.color-opt').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    state.selectedColor = btn.dataset.color;
+                    updateColorSelectionUI();
+                });
+            });
+
+            // Clear All Checkboxes Action
+            document.getElementById('clear-all-checkboxes-btn').addEventListener('click', () => {
+                if (confirm('Clear all habit checkmarks for all days?')) {
+                    state.habits.forEach(h => h.records = {});
+                    saveState();
+                    render();
+                }
+            });
+
+            // Appearance Modal Controls
+            document.getElementById('open-appearance-modal-btn').addEventListener('click', () => {
+                dom.appearanceModal.classList.remove('opacity-0', 'pointer-events-none');
+            });
+
+            document.getElementById('close-appearance-modal-btn').addEventListener('click', () => {
+                dom.appearanceModal.classList.add('opacity-0', 'pointer-events-none');
+            });
+
+            // Mode Selector (Light / Dark / Auto)
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    themeState.mode = btn.dataset.mode;
+                    saveThemeState();
+                    applyTheme();
+                });
+            });
+
+            // Preset Themes
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const preset = btn.dataset.preset;
+                    if (preset === 'standart') {
+                        themeState.mode = 'light';
+                        themeState.accent = '#ef4444';
+                        themeState.accentName = 'Red';
+                        themeState.bgTint = '#f8fafc';
+                    } else if (preset === 'ocean') {
+                        themeState.mode = 'dark';
+                        themeState.accent = '#2563eb';
+                        themeState.accentName = 'Blue';
+                        themeState.bgTint = '#0f172a';
+                    } else if (preset === 'forest') {
+                        themeState.mode = 'light';
+                        themeState.accent = '#10b981';
+                        themeState.accentName = 'Emerald';
+                        themeState.bgTint = '#ecfdf5';
+                    } else if (preset === 'sakura') {
+                        themeState.mode = 'light';
+                        themeState.accent = '#ec4899';
+                        themeState.accentName = 'Pink';
+                        themeState.bgTint = '#fdf2f8';
+                    } else if (preset === 'graphite') {
+                        themeState.mode = 'dark';
+                        themeState.accent = '#0891b2';
+                        themeState.accentName = 'Cyan';
+                        themeState.bgTint = '#0f172a';
+                    } else if (preset === 'sunset') {
+                        themeState.mode = 'dark';
+                        themeState.accent = '#d97706';
+                        themeState.accentName = 'Amber';
+                        themeState.bgTint = '#0f172a';
+                    } else if (preset === 'lavender') {
+                        themeState.mode = 'light';
+                        themeState.accent = '#4f46e5';
+                        themeState.accentName = 'Indigo';
+                        themeState.bgTint = '#f4f4fe';
+                    } else if (preset === 'cherry') {
+                        themeState.mode = 'dark';
+                        themeState.accent = '#be123c';
+                        themeState.accentName = 'Crimson';
+                        themeState.bgTint = '#110609';
+                    } else if (preset === 'minimal') {
+                        themeState.mode = 'light';
+                        themeState.accent = '#334155';
+                        themeState.accentName = 'Slate';
+                        themeState.bgTint = '#f8fafc';
+                    }
+                    saveThemeState();
+                    applyTheme();
+                });
+            });
+
+            // Primary Accent Colors
+            document.querySelectorAll('.accent-swatch').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    themeState.accent = btn.dataset.accent;
+                    themeState.accentName = btn.dataset.name;
+                    saveThemeState();
+                    applyTheme();
+                });
+            });
+
+            // Background Tints
+            document.querySelectorAll('.bg-tint-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    themeState.bgTint = btn.dataset.tint;
+                    saveThemeState();
+                    applyTheme();
+                });
+            });
+
+            // Text Scaling
+            document.querySelectorAll('.scale-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    themeState.fontScale = btn.dataset.scale;
+                    saveThemeState();
+                    applyTheme();
+                });
+            });
+
+            // Reset Theme Button
+            document.getElementById('reset-theme-btn').addEventListener('click', () => {
+                themeState.mode = 'light';
+                themeState.accent = '#4f46e5';
+                themeState.accentName = 'Indigo';
+                themeState.bgTint = '#f8fafc';
+                themeState.fontScale = '1.0';
+                saveThemeState();
+                applyTheme();
+            });
+        }
+
+        function openHabitModal(habit = null) {
+            if (habit) {
+                dom.modalTitleText.textContent = 'Edit Habit';
+                dom.formHabitId.value = habit.id;
+                dom.formHabitName.value = habit.name;
+                state.selectedColor = habit.color || 'indigo';
+            } else {
+                dom.modalTitleText.textContent = 'Add New Habit';
+                dom.formHabitId.value = '';
+                dom.formHabitName.value = '';
+                state.selectedColor = 'indigo';
+            }
+            updateColorSelectionUI();
+            dom.habitModal.classList.remove('opacity-0', 'pointer-events-none');
+            dom.modalContainer.classList.remove('scale-95');
+            dom.formHabitName.focus();
+        }
+
+        function closeHabitModal() {
+            dom.habitModal.classList.add('opacity-0', 'pointer-events-none');
+            dom.modalContainer.classList.add('scale-95');
+        }
+
+        function updateColorSelectionUI() {
+            document.querySelectorAll('.color-opt').forEach(btn => {
+                if (btn.dataset.color === state.selectedColor) {
+                    btn.classList.add('ring-2', 'ring-offset-2', 'ring-slate-800', 'dark:ring-white', 'scale-110');
+                } else {
+                    btn.classList.remove('ring-2', 'ring-offset-2', 'ring-slate-800', 'dark:ring-white', 'scale-110');
+                }
+            });
+        }
+
+        // Drag & Drop Reordering Handlers
+        let draggedRowIdx = null;
+
+        function handleDragStart(e, idx) {
+            draggedRowIdx = idx;
+            e.dataTransfer.effectAllowed = 'move';
+            e.currentTarget.classList.add('dragging');
+        }
+
+        function handleDragOver(e) {
+            if (e.preventDefault) e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            return false;
+        }
+
+        function handleDragEnter(e) {
+            e.currentTarget.classList.add('drag-over');
+        }
+
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        function handleDrop(e, targetIdx) {
+            e.stopPropagation();
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+
+            if (draggedRowIdx !== null && draggedRowIdx !== targetIdx) {
+                const movedHabit = state.habits.splice(draggedRowIdx, 1)[0];
+                state.habits.splice(targetIdx, 0, movedHabit);
+                saveState();
+                render();
+            }
+            return false;
+        }
+
+        function handleDragEnd(e) {
+            e.currentTarget.classList.remove('dragging');
+            document.querySelectorAll('tr.drag-over').forEach(tr => tr.classList.remove('drag-over'));
+            draggedRowIdx = null;
+        }
+
+        // Render Matrix Table with Month Locking Indicator & Drag Drop Support
+        function renderMatrixTable() {
+            const daysCount = getDaysInMonth(state.selectedYear, state.selectedMonth);
+            const dayLetters = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+            const isCurrentMonth = (state.selectedYear === TODAY_YEAR && state.selectedMonth === TODAY_MONTH);
+
+            // Update mode instruction text based on month status
+            if (!isCurrentMonth) {
+                dom.modeStatusBadge.className = 'px-2.5 py-1 text-[11px] font-black rounded-md bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300 tracking-wider';
+                dom.modeStatusBadge.textContent = 'READ ONLY';
+                dom.modeInstructionText.textContent = '🔒 This month is locked. You can view records but cannot make check-ins.';
+            } else if (state.isEditMode) {
+                dom.modeStatusBadge.className = 'px-2.5 py-1 text-[11px] font-black rounded-md bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 tracking-wider';
+                dom.modeStatusBadge.textContent = 'EDIT MODE';
+                dom.modeInstructionText.textContent = '✋ Drag & drop rows to reorder, or edit/delete titles.';
+            } else {
+                dom.modeStatusBadge.className = 'px-2.5 py-1 text-[11px] font-black rounded-md bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200 tracking-wider';
+                dom.modeStatusBadge.textContent = 'VIEW MODE';
+                dom.modeInstructionText.textContent = 'Current month is unlocked! Click any day box to toggle check-ins.';
+            }
+
+            // Build Header
+            let theadHTML = `<tr class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 text-xs font-black uppercase tracking-wider">`;
+            theadHTML += `<th class="py-3 px-4 sticky-col-header bg-slate-100 dark:bg-slate-800 min-w-[240px] w-64"># &nbsp; HABIT LIST</th>`;
+
+            for (let d = 1; d <= daysCount; d++) {
+                const dateObj = new Date(state.selectedYear, state.selectedMonth, d);
+                const dayOfWeek = dayLetters[dateObj.getDay()];
+                const isTodayCell = (isCurrentMonth && d === TODAY_DATE);
+
+                if (isTodayCell) {
+                    theadHTML += `<th class="py-2 px-1 text-center w-10 bg-indigo-100 dark:bg-indigo-950/80 text-brand-primary">
+                        <div class="text-[10px]">${dayOfWeek}</div>
+                        <div class="w-6 h-6 rounded-full bg-brand-primary text-white mx-auto flex items-center justify-center text-xs font-black">${d}</div>
+                    </th>`;
+                } else {
+                    theadHTML += `<th class="py-2 px-1 text-center w-10">
+                        <div class="text-[10px] text-slate-400 dark:text-slate-500">${dayOfWeek}</div>
+                        <div class="text-xs font-bold text-slate-700 dark:text-slate-300">${d}</div>
+                    </th>`;
+                }
+            }
+
+            theadHTML += `<th class="py-3 px-3 text-center min-w-[50px] sticky right-0 bg-slate-100 dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700">TOTAL</th>`;
+            theadHTML += `</tr>`;
+            dom.matrixThead.innerHTML = theadHTML;
+
+            // Build Matrix Body Rows
+            let tbodyHTML = '';
+            state.habits.forEach((habit, idx) => {
+                const colorConfig = COLOR_MAP[habit.color] || COLOR_MAP.indigo;
+                let habitMonthDoneCount = 0;
+                const draggableAttrs = (state.isEditMode && isCurrentMonth) ? 
+                    `draggable="true" ondragstart="handleDragStart(event, ${idx})" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, ${idx})" ondragend="handleDragEnd(event)" class="draggable-row hover:bg-slate-50/70 dark:hover:bg-slate-700/40 transition"` : 
+                    `class="hover:bg-slate-50/70 dark:hover:bg-slate-700/40 transition ${!isCurrentMonth ? 'opacity-85' : ''}"`;
+
+                tbodyHTML += `<tr ${draggableAttrs}>`;
+
+                // Sticky Title / Actions Column with Index Number & Drag Handle
+                tbodyHTML += `<td class="py-2 px-4 sticky-col bg-white dark:bg-slate-800 border-r border-slate-100 dark:border-slate-700/60 min-w-[240px] w-64">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2.5 min-w-0 pr-2">
+                            ${state.isEditMode && isCurrentMonth ? '<span class="text-slate-400 cursor-grab select-none text-xs">⋮⋮</span>' : ''}
+                            <span class="text-xs font-black text-slate-600 dark:text-slate-400 font-mono w-4">${idx + 1}.</span>
+                            <span class="w-3 h-3 rounded-full ${colorConfig.bg} flex-shrink-0"></span>
+                            <span class="font-extrabold text-slate-800 dark:text-slate-100 text-xs truncate" title="${escapeHtml(habit.name)}">${escapeHtml(habit.name)}</span>
+                        </div>`;
+
+                if (state.isEditMode && isCurrentMonth) {
+                    tbodyHTML += `<div class="flex items-center space-x-1 flex-shrink-0">
+                        <button onclick="openHabitModal(state.habits[${idx}])" class="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 text-brand-primary rounded" title="Edit">✏️</button>
+                        <button onclick="deleteHabit('${habit.id}')" class="p-1 hover:bg-rose-100 dark:hover:bg-rose-950 text-rose-500 rounded" title="Delete">🗑️</button>
+                    </div>`;
+                }
+
+                tbodyHTML += `</div></td>`;
+
+                // Day Checkboxes
+                for (let d = 1; d <= daysCount; d++) {
+                    const dateKey = formatDateKey(state.selectedYear, state.selectedMonth, d);
+                    const isChecked = habit.records && !!habit.records[dateKey];
+                    if (isChecked) habitMonthDoneCount++;
+
+                    const isTodayCell = (isCurrentMonth && d === TODAY_DATE);
+                    const cellBgClass = isTodayCell ? 'bg-indigo-50/50 dark:bg-indigo-950/20' : '';
+
+                    tbodyHTML += `<td class="py-2 px-1 text-center h-12 align-middle ${cellBgClass}">`;
+                    
+                    if (isChecked) {
+                        tbodyHTML += `<button ${!isCurrentMonth ? 'disabled' : ''} onclick="toggleHabitCheck('${habit.id}', '${dateKey}')" class="cb-box w-7 h-7 rounded-lg ${colorConfig.bg} text-white flex items-center justify-center mx-auto shadow-xs ${!isCurrentMonth ? 'cursor-not-allowed opacity-75' : ''}">
+                            <svg class="w-4 h-4 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                        </button>`;
+                    } else {
+                        tbodyHTML += `<button ${!isCurrentMonth ? 'disabled' : ''} onclick="toggleHabitCheck('${habit.id}', '${dateKey}')" class="cb-box w-7 h-7 rounded-lg border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 ${isCurrentMonth ? 'hover:border-slate-400 dark:hover:border-slate-500' : 'cursor-not-allowed opacity-50'} mx-auto"></button>`;
+                    }
+
+                    tbodyHTML += `</td>`;
+                }
+
+                // Row Total
+                tbodyHTML += `<td class="py-2 px-3 text-center font-black text-slate-800 dark:text-slate-100 text-xs sticky right-0 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700">${habitMonthDoneCount}</td>`;
+                tbodyHTML += `</tr>`;
+            });
+
+            dom.habitsTableBody.innerHTML = tbodyHTML;
+        }
+
+        function renderSVGSparkline() {
+            const daysCount = getDaysInMonth(state.selectedYear, state.selectedMonth);
+            const totalHabits = state.habits.length;
+            const points = [];
+
+            for (let d = 1; d <= daysCount; d++) {
+                const dateKey = formatDateKey(state.selectedYear, state.selectedMonth, d);
+                let doneCount = 0;
+                if (totalHabits > 0) {
+                    state.habits.forEach(h => {
+                        if (h.records && h.records[dateKey]) doneCount++;
+                    });
+                }
+                const pct = totalHabits > 0 ? (doneCount / totalHabits) : 0;
+                points.push(pct);
+            }
+
+            const width = 300;
+            const height = 70;
+            const step = width / (daysCount - 1);
+
+            let pathD = '';
+            points.forEach((pct, idx) => {
+                const x = idx * step;
+                const y = height - (pct * (height - 10)) - 5;
+                if (idx === 0) {
+                    pathD += `M ${x} ${y}`;
+                } else {
+                    pathD += ` L ${x} ${y}`;
+                }
+            });
+
+            const areaD = `${pathD} L ${width} ${height} L 0 ${height} Z`;
+
+            dom.svgTrendChart.innerHTML = `
+                <defs>
+                    <linearGradient id="trendGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="var(--brand-600, #4f46e5)" stop-opacity="0.35"/>
+                        <stop offset="100%" stop-color="var(--brand-600, #4f46e5)" stop-opacity="0.0"/>
+                    </linearGradient>
+                </defs>
+                <path d="${areaD}" fill="url(#trendGradient)" />
+                <path d="${pathD}" fill="none" stroke="var(--brand-600, #4f46e5)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+            `;
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        // Global Habit Action Handlers
+        window.toggleHabitCheck = function(habitId, dateKey) {
+            // Only allow toggling if in current active month
+            if (state.selectedYear !== TODAY_YEAR || state.selectedMonth !== TODAY_MONTH) return;
+
+            const habit = state.habits.find(h => h.id === habitId);
+            if (!habit) return;
+
+            if (!habit.records) habit.records = {};
+            
+            if (habit.records[dateKey]) {
+                delete habit.records[dateKey];
+            } else {
+                habit.records[dateKey] = true;
+            }
+
+            saveState();
+            render();
+        };
+
+        window.deleteHabit = function(habitId) {
+            if (confirm('Are you sure you want to delete this habit?')) {
+                state.habits = state.habits.filter(h => h.id !== habitId);
+                saveState();
+                render();
+            }
+        };
+
+        // Master Render Function
+        function render() {
+            // Render Header Month Display
+            const monthNames = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
+            dom.monthDisplayName.textContent = `${monthNames[state.selectedMonth]} ${state.selectedYear}`;
+
+            // Render Today Info Wireframe Date
+            dom.wireframeDate.textContent = formatDisplayWireframeDate(state.currentDate);
+
+            // Toggle Empty State View
+            if (!state.habits || state.habits.length === 0) {
+                dom.emptyStateView.classList.remove('hidden');
+            } else {
+                dom.emptyStateView.classList.add('hidden');
+            }
+
+            // Calculate Today Stats
+            const totalHabitsCount = state.habits.length;
+            const todayKey = formatDateKey(TODAY_YEAR, TODAY_MONTH, TODAY_DATE);
+            let todayDoneCount = 0;
+
+            if (totalHabitsCount > 0) {
+                state.habits.forEach(h => {
+                    if (h.records && h.records[todayKey]) todayDoneCount++;
+                });
+            }
+
+            dom.activeHabitsCount.textContent = totalHabitsCount;
+            dom.completedCountBadge.textContent = `${todayDoneCount} of ${totalHabitsCount}`;
+
+            const completionPct = totalHabitsCount > 0 ? Math.round((todayDoneCount / totalHabitsCount) * 100) : 0;
+            dom.completionPctText.textContent = `${completionPct}%`;
+
+            // Update SVG Donut Progress Path
+            dom.donutPath.setAttribute('stroke-dasharray', `${completionPct}, 100`);
+
+            // Render Matrix & Chart
+            renderMatrixTable();
+            renderSVGSparkline();
+        }
+
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
