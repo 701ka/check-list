@@ -564,20 +564,18 @@
                 // Telegram WebApp SDK ni ishga tushirish
                 if (window.Telegram && window.Telegram.WebApp) {
                     window.Telegram.WebApp.ready();
-                    window.Telegram.WebApp.expand(); // Ekranni to'liq yoyish
+                    window.Telegram.WebApp.expand();
                     
-                    // Telegram mavzusiga moslashish (Light/Dark)
                     if (window.Telegram.WebApp.colorScheme === 'dark') {
                         themeState.mode = 'dark';
                     }
                 }
 
-                loadState();
                 loadThemeState();
                 applyTheme();
-                if (!state.habits || state.habits.length === 0) {
-                    seedInitialData();
-                }
+                
+                // Avval LocalStorage dan tezkor o'qish, keyin CloudStorage bilan sinxronlash
+                loadState();
                 bindEvents();
                 render();
             }
@@ -585,34 +583,46 @@
             // Local Storage & Telegram CloudStorage Integration
             function loadState() {
                 try {
-                    // Avval Telegram CloudStorage orqali yuklashni tekshiramiz (sinxronizatsiya)
+                    const saved = localStorage.getItem('habit_tracker_state');
+                    if (saved) {
+                        const parsed = JSON.parse(saved);
+                        if (parsed && Array.isArray(parsed.habits) && parsed.habits.length > 0) {
+                            state.habits = parsed.habits;
+                        } else {
+                            seedInitialData();
+                        }
+                    } else {
+                        seedInitialData();
+                    }
+
+                    // Telegram CloudStorage-dan qo'shimcha tekshirish
                     if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.CloudStorage) {
                         window.Telegram.WebApp.CloudStorage.getItem('habit_tracker_state', (err, value) => {
                             if (!err && value) {
                                 const parsed = JSON.parse(value);
-                                state.habits = parsed.habits || [];
-                                render();
-                                return;
+                                if (parsed && Array.isArray(parsed.habits) && parsed.habits.length > 0) {
+                                    state.habits = parsed.habits;
+                                    localStorage.setItem('habit_tracker_state', value);
+                                    render();
+                                }
                             }
                         });
                     }
-                    const saved = localStorage.getItem('habit_tracker_state');
-                    if (saved) {
-                        const parsed = JSON.parse(saved);
-                        state.habits = parsed.habits || [];
-                    }
                 } catch (e) {
                     console.error("Failed to load habit state:", e);
-                    state.habits = [];
+                    if (!state.habits || state.habits.length === 0) {
+                        seedInitialData();
+                    }
                 }
             }
 
             function saveState() {
                 try {
                     const dataStr = JSON.stringify({ habits: state.habits });
+                    // LocalStorage-ga darhol va kafolatli saqlash
                     localStorage.setItem('habit_tracker_state', dataStr);
                     
-                    // Telegram CloudStorage-ga avtomatik saqlash (qurilmalar o'rtasida moslashadi)
+                    // Telegram CloudStorage-ga avtomatik zaxira saqlash
                     if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.CloudStorage) {
                         window.Telegram.WebApp.CloudStorage.setItem('habit_tracker_state', dataStr);
                     }
